@@ -17,6 +17,9 @@ directly. Loss is the mean value of all of the sample losses, and some of them c
 significantly, while others might rise just slightly, changing the prediction for them from a correct
 to an incorrect class at the same time
 - a solution to the above problem is to use a learning rate decay
+- AdaGrad provides a way to normalize parameter updates by keeping a history of previous updates — the bigger the sum of the updates is, in either
+direction (positive or negative), the smaller updates are made further in training. This lets less-frequently updated parameters to keep-up with changes,
+effectively utilizing more neurons for training.
 """
 class Dense_Layer:
      def __init__(self, num_inputs, num_neurons, weight_regularizer_l1=0, weight_regularizer_l2=0, bias_regularizer_l1=0, bias_regularizer_l2=0):
@@ -153,13 +156,58 @@ class Activation_Softmax_Loss_CategoricalCrossEntropy():
           self.dinputs[range(sample_num) , y_true] -= 1
           self.dinputs = self.dinputs / sample_num
 class Optimizer_SGD:
-     def __init__(self , LEARNING_RATE = 1.0):
+     def __init__(self , LEARNING_RATE = 1.0 , decay=0. , momentum = 0):
           self.LEARNING_RATE = LEARNING_RATE
+          self.decay = decay
+          self.current_learning_rate = LEARNING_RATE
+          self.iter_num = 0
+          self.momentum  = momentum
+     # called before any update
+     def pre_update_params(self):
+          if self.decay:
+               self.current_learning_rate = self.LEARNING_RATE*(1/(1 + self.decay*self.iter_num)) # exponential decay
+          
      def update_params(self , layer):
+          if self.momentum:
+               if not hasattr(layer , 'weight_momentums'): # if the layer does not already have a momentum
+                    layer.weight_momentums = np.zeros_like(layer.weights)
+                    layer.biases_momentums = np.zeros_like(layer.biases)
+               weight_updates = self.momentum * self.weight_momentums - self.current_learning_rate* layer.dweights
+               layer.weight_momentums = weight_updates
+               biases_updates = self.momentum * layer.biases_momentums - self.current_learning_rate* layer.dbiases
+               layer.biases_momentums = biases_updates
+          else:
+               weight_updates = -self.current_learning_rate * layer.dweight
+               biases_updates = -self.current_learning_rate * layer.dbiases
+          
           layer.weights += -self.LEARNING_RATE * layer.dweights
           layer.biases += -self.LEARNING_RATE * layer.dbiases
-          
-          
+
+     def post_update_params(self):
+          self.iter_num += 1
+class AdaGrad:
+     def __init__(self , learning_rate =1.0 , decay = 0. , epsilon = 1e-7): # a momentum maybe?
+          self.learning_rate = learning_rate
+          self.decay = decay
+          self.epsilon = epsilon
+          self.current_lr = learning_rate
+          self.iter_num = 0
+     def pre_update_params(self):
+          if self.decay:
+               self.current_lr = self.learning_rate / (1 + self.decay*self.iter_num)
+     def update_params(self, layer):
+          if not hasattr(layer , 'weight_cache'):
+               layer.weight_cache = np.zeros_like(layer.weights)
+               layer.bias_cache = np.zero_like(layer.biase)
+          # cache update
+          layer.weight_cache += layer.dweights**2
+          layer.bias_cache += layer.dbisas**2
+          # epsilon is used for preventing division by zero
+          layer.weights += -self.current_lr*layer.dweights / (np.sqrt(layer.weight_cache) + self.epsilon)
+          layer.biases += -self.current_lr*layer.dbiases / (np.sqrt(layer.bias_cache) + self.epsilon)
+     def post_update_params(self):
+          self.iter_num += 1
+                                  
           
      
 """
