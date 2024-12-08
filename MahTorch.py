@@ -20,6 +20,13 @@ to an incorrect class at the same time
 - AdaGrad provides a way to normalize parameter updates by keeping a history of previous updates — the bigger the sum of the updates is, in either
 direction (positive or negative), the smaller updates are made further in training. This lets less-frequently updated parameters to keep-up with changes,
 effectively utilizing more neurons for training.
+- One general rule to follow when selecting initial model hyperparameters is to find the smallest model possible
+that still learns.
+- The process of trying different model settings is called hyperparameter searching
+- . It is usually fine to scale datasets that consist of larger numbers than the training data using a scaler prepared on the training data. If the 
+resulting numbers are slightly outside of the -1 to 1 range, it does not affect validation or testing negatively, since we do not train on these data.
+-be aware that non-linear scaling can leak the information from other datasets to the training dataset and, in this case,
+the scaler should be prepared on the training data only
 """
 class Dense_Layer:
      def __init__(self, num_inputs, num_neurons, weight_regularizer_l1=0, weight_regularizer_l2=0, bias_regularizer_l1=0, bias_regularizer_l2=0):
@@ -107,16 +114,16 @@ class Loss_categoricalCrossEntropy(Loss):
           # clipping the data to prevent division by 0 and prevent to drag mean toward any data
           y_pred_clipped = np.clip(y_pred , 1e-7 , 1 - 1e-7)
           if len(y_true.shape) == 1:
-               correct_confidence = y_pred_clipped[
+               correct_confidences = y_pred_clipped[
                     range(samples),
                     y_true
                     ]
-          elif len(y_true.shape == 2):
+          elif len(y_true.shape)== 2:
                correct_confidences = np.sum(
                     y_pred_clipped * y_true,
                     axis=1
                )
-          negative_log_likelihoods = -np.log(correct_confidence)
+          negative_log_likelihoods = -np.log(correct_confidences)
           return negative_log_likelihoods
      def backward(self , dvalues , y_true):
           samples_num = len(dvalues)
@@ -145,7 +152,7 @@ class Activation_Softmax_Loss_CategoricalCrossEntropy():
           self.loss = Loss_categoricalCrossEntropy()
           
      def forward(self , inputs , y_true):
-          self.activation.foward(inputs)
+          self.activation.forward(inputs)
           self.output = self.activation.output
           return self.loss.calculate(self.output , y_true)
      def backward(self , dvalues , y_true):
@@ -198,18 +205,73 @@ class AdaGrad:
      def update_params(self, layer):
           if not hasattr(layer , 'weight_cache'):
                layer.weight_cache = np.zeros_like(layer.weights)
-               layer.bias_cache = np.zero_like(layer.biase)
+               layer.bias_cache = np.zeros_like(layer.biases)
           # cache update
           layer.weight_cache += layer.dweights**2
-          layer.bias_cache += layer.dbisas**2
+          layer.bias_cache += layer.dbiasas**2
           # epsilon is used for preventing division by zero
           layer.weights += -self.current_lr*layer.dweights / (np.sqrt(layer.weight_cache) + self.epsilon)
           layer.biases += -self.current_lr*layer.dbiases / (np.sqrt(layer.bias_cache) + self.epsilon)
      def post_update_params(self):
           self.iter_num += 1
-                                  
+class Optimizer_RMSProp:
+     def __init__(self , learning_rate = 0.001, epsilon = 1e-7 , decay= 0.  , rho = 0.9):
+          self.learning_rate = learning_rate
+          self.current_learning_rate = learning_rate
+          self.decay = decay
+          self.epsilon = epsilon
+          self.rho = rho
+          self.iter_num = 0
+     def pre_update_params(self):
+          if self.decay:
+               self.current_learning_rate = self.current_learning_rate * (1 / 1 + self.decay * self.iter_num)
+     def update_params(self , layer):
+          if not hasattr(layer , 'weight_cache'):
+               layer.weight_cache = np.zeros_like(layer.weights)
+               layer.bias_cache = np.zeros_like(layer.biases)
+          layer.weight_cache = self.rho * layer.weight_cache + (1 - self.rho) * layer.dweights**2 
+          layer.bias_cache = self.rho * layer.bias_cache + (1 - self.rho) * layer.dbiases**2 
           
-     
+          layer.weights += -self.current_learning_rate * layer.dweights / (np.sqrt(layer.weight_cache) + self.epsilon)
+          layer.biases += -self.current_learning_rate * layer.dbiases / (np.sqrt(layer.bias_cache) + self.epsilon)
+     def post_update_params(self):
+          self.iter_num += 1
+class Optimizer_Adam:
+     def __init__(self , learning_rate = 0.001 , decay = 0. , epsilon = 1e-7 , beta_1 = 0.9 , beta_2 = 0.999):
+          self.learning_rate = learning_rate
+          self.current_learning_rate = learning_rate
+          self.decay = decay
+          self.epsilon = epsilon
+          self.iter_num = 0
+          self.beta_1 = beta_1
+          self.beta_2 = beta_2
+     def pre_update_params(self):
+          if self.decay:
+               self.current_learning_rate = self.current_learning_rate * (1 / (1 + self.decay * self.iter_num))
+     def update_params(self, layer):
+          if not hasattr(layer , 'weight_cache'):
+               layer.weight_cache = np.zeros_like(layer.weights)
+               layer.bias_cache = np.zeros_like(layer.biases)
+               layer.weight_momentums = np.zeros_like(layer.weights)
+               layer.bias_momentums = np.zeros_like(layer.biases)
+               # updating momentum with current gradients
+          layer.weight_momentums = self.beta_1 * layer.weight_momentums + (1 - self.beta_1) * layer.dweights
+          layer.bias_momentums = self.beta_1 * layer.bias_momentums + (1 - self.beta_1) * layer.dbiases
+          # get corrected momentum
+          weight_momentums_corrected = layer.weight_momentums / (1 - self.beta_1 ** (self.iter_num + 1))
+          bias_momentums_corrected = layer.bias_momentums / (1 - self.beta_1 ** (self.iter_num + 1))
+          # updating the cache
+          layer.weight_cache = self.beta_2 * layer.weight_cache + (1 - self.beta_2) * layer.dweights**2
+          layer.bias_cache = self.beta_2 * layer.bias_cache + (1 - self.beta_2) * layer.dbiases**2
+          # get corrected cache
+          weight_cache_corrected = layer.weight_cache / (1 - self.beta_2 ** (self.iter_num + 1))
+          bias_cache_corrected = layer.bias_cache / (1 - self.beta_2 ** (self.iter_num + 1))
+          # Vanilla SGD
+          layer.weights += self.current_learning_rate * weight_momentums_corrected / (np.sqrt(weight_cache_corrected) + self.epsilon)
+          layer.biases += self.current_learning_rate * bias_momentums_corrected / (np.sqrt(bias_cache_corrected) + self.epsilon)
+          
+     def post_update(self):
+          self.iter_num += 1
 """
 # Create dataset
 X, y = spiral_data(samples=100, classes=3)
