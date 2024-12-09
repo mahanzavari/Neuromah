@@ -31,8 +31,52 @@ the scaler should be prepared on the training data only
 it would be better to have many neurons contributing to a model’s output, rather than a select few.
 - Another problem dropout can help with is co-adoption, which happens when neurons depend on the output values of other neurons and
 do not learn the underlying function on their own
-- drop-out only zero-outs the neurons output. It does not disable them in any sense  
+- drop-out only zero-outs the neurons output. It does not disable them in any sense 
+- weight initialization also contributes to the learning of a model; one way to optimize the weights initialization is to use the **Glorot uniform** method 
 """ 
+class Model:
+     def __init__(self):
+          self.layers = []
+     def add(self , layer):
+          self.layers.append(layer)
+     def set(self , * , loss , optimizer): # * means that the sunsequent parameters are keyword arguments
+          self.loss = loss
+          self.optimizer = optimizer
+     def train(self , X , y , * , epochs =1 , verbose=1):
+          for epoch in range(1 , epochs + 1):
+               output = self.forward(X)
+               print(output)
+               exit()
+     def finalize(self):
+          # setting the Input Layer
+          self.input_layer = Layer_Input()
+          layer_count = len(self.layers)
+          self.trainable_layers = []
+     
+          for i in range(layer_count):
+               if i == 0:# the input layer
+                    self.layers[i].prev = self.input_layer
+                    self.next = self.layers[i + 1]
+               elif i < layer_count - 1: # the intermediary layers : hidden layers
+                    self.layers[i].prev = self.layers[i - 1]
+                    self.layers[i].next = self.layers[i + 1]
+               else: # the last layer
+                    self.layers[i].prev = self.layers[i - 1]
+                    self.layers[i].next = self.loss
+          # if a layer contains an attribute called "weights" then it's trainable
+               if hasattr(self.layers[i] , 'weights'):
+                    self.trainable_layers.append(self.layers[i]) 
+     def forward(self , X):
+          self.input_layer.forward(X)
+          # passing the output of the previous object into the current layer 
+          for layer in self.layers:
+               layer.forward(layer.prev.output)
+          # returning the last layer's output
+          return layer.output
+          
+class Layer_Input: 
+     def forward(self, inputs):
+          self.output = inputs
 class Layer_Dense:
      def __init__(self, num_inputs, num_neurons, weight_regularizer_l1=0, weight_regularizer_l2=0, bias_regularizer_l1=0, bias_regularizer_l2=0):
           self.weights = 0.01 * np.random.randn(num_inputs , num_neurons) # 0.01 == so as to speed up the training
@@ -114,7 +158,9 @@ class Loss:
      def calculate(self , output , y):
           sample_losses = self.forward(output , y)
           data_loss = np.mean(sample_losses)
-          return data_loss
+          return data_loss , self.regularization_loss()
+     def remember_trainable_layers(self , trainable_layers): # notifies the Loss class which layers are trainable
+          self.trainable_layers = trainable_layers
      def regularization_loss(self , layer):
           regularization_loss = 0 # default value
           if layer.weight_regularizer_l1 > 0 :
@@ -175,13 +221,20 @@ class Activation_Sigmoid:
           
      def backward(self , dvalues):
           self.dinputs = dvalues * (1 - self.outputs) * self.outputs
+
+class Activation_Linear:
+     def forward(self , inputs):
+          self.inputs = inputs
+          self.outputs = inputs
           
+     def backward(self , dvalues):
+          self.dinputs = dvalues.copy()
 class Loss_BinrayCrossentropy(Loss):
      def forward(self , y_pred , y_true):
           
           y_pred_clipped = np.clip(y_pred , 1e-7 , 1 - 1e-7)
           
-          sample_losses = -(y_ture * np.log(y_pred_clipped) + (1 - y_true) * np.log(1 - y_pred_clipped))
+          sample_losses = -(y_true * np.log(y_pred_clipped) + (1 - y_true) * np.log(1 - y_pred_clipped))
           sample_losses = np.mean(sample_losses , axis=-1)
           return sample_losses
      def backward(self , dvalues , y_true):
@@ -192,6 +245,21 @@ class Loss_BinrayCrossentropy(Loss):
           clipped_dvalues = np.clip(dvalues, 1e-7, 1 - 1e-7)
           self.dinputs = -(y_true / clipped_dvalues - (1 - y_true) / (1 - clipped_dvalues)) / outputs
           self.dinputs = self.dinputs / samples
+          
+class Loss_MeanSquaredError(Loss):
+     
+     def forward(self , y_pred , y_true):
+          samples_losses = np.mean((y_true-y_pred)**2 , axis = -1)
+          return samples_losses
+
+     def backward(self , dvalues , y_true):
+          
+          samples_num = len(dvalues)
+          outputs = len(dvalues[0])
+          self.dinputs = -2 * (y_true - dvalues) / outputs
+          self,dinputs = self.dinputs / samples_num
+          
+
 class Activation_Softmax_Loss_CategoricalCrossEntropy():
      def __init__(self):
           self.activation = Activation_Softmax()
@@ -318,6 +386,21 @@ class Optimizer_Adam:
           
      def post_update(self):
           self.iter_num += 1
+"""
+model.add(Layer_Dense(1, 64))
+model.add(Activation_ReLU())
+model.add(Layer_Dense(64, 64))
+model.add(Activation_ReLU())
+model.add(Layer_Dense(64, 1))
+model.add(Activation_Linear())
+# Set loss and optimizer objects
+model.set(
+loss=Loss_MeanSquaredError(),
+optimizer=Optimizer_Adam(learning_rate=0.005, decay=1e-3),
+)
+"""
+          
+          
 """
 # Create dataset
 X, y = spiral_data(samples=100, classes=3)
