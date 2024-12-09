@@ -27,15 +27,20 @@ that still learns.
 resulting numbers are slightly outside of the -1 to 1 range, it does not affect validation or testing negatively, since we do not train on these data.
 -be aware that non-linear scaling can leak the information from other datasets to the training dataset and, in this case,
 the scaler should be prepared on the training data only
-"""
-class Dense_Layer:
+- Large weights might indicate that a neuron is attempting to memorize a data element; generally, it is believed that
+it would be better to have many neurons contributing to a model’s output, rather than a select few.
+- Another problem dropout can help with is co-adoption, which happens when neurons depend on the output values of other neurons and
+do not learn the underlying function on their own
+- drop-out only zero-outs the neurons output. It does not disable them in any sense  
+""" 
+class Layer_Dense:
      def __init__(self, num_inputs, num_neurons, weight_regularizer_l1=0, weight_regularizer_l2=0, bias_regularizer_l1=0, bias_regularizer_l2=0):
           self.weights = 0.01 * np.random.randn(num_inputs , num_neurons) # 0.01 == so as to speed up the training
           self.biases = np.zeros((1 , num_neurons)) # ensuring that each neuron fires
-          # self.weight_regularizer_l1 = weight_regularizer_l1
-          # self.weight_regularizer_l2 = weight_regularizer_l2
-          # self.bias_regularizer_l1 = bias_regularizer_l1
-          # self.bias_regularizer_l2 = bias_regularizer_l2
+          self.weight_regularizer_l1 = weight_regularizer_l1
+          self.weight_regularizer_l2 = weight_regularizer_l2
+          self.bias_regularizer_l1 = bias_regularizer_l1
+          self.bias_regularizer_l2 = bias_regularizer_l2
      def forward(self , inputs , training):
           self.inputs = inputs # so we would remember what the inputs were
           self.outputs = np.dot(self.weights , inputs) + self.biases
@@ -43,19 +48,17 @@ class Dense_Layer:
           self.dweights = np.dot(self.inputs.T , dvalues)
           self.dbiases = np.sum(dvalues, axis=0, keepdims=True)
           if self.weight_regularizer_l1 > 0:
-            dL1 = np.ones_like(self.weights)
-            dL1[self.weights < 0] = -1
-            self.dweights += self.weight_regularizer_l1 * dL1
+               dL1 = np.ones_like(self.weights)
+               dL1[self.weights < 0] = -1 # the derivative of abs functions is 1 for x > 0 and -1 for x < 0 (L1 = λΣ|ω|)
+               self.dweights += self.weight_regularizer_l1 * dL1
           if self.weight_regularizer_l2 > 0:
-              self.dweights += 2 * self.weight_regularizer_l2 * \
-                               self.weights
+               self.dweights += 2 * self.weight_regularizer_l2 * self.weights #2(lambda)w which is the derivative of L2 (λΣω^2)
           if self.bias_regularizer_l1 > 0:
-              dL1 = np.ones_like(self.biases)
-              dL1[self.biases < 0] = -1
-              self.dbiases += self.bias_regularizer_l1 * dL1
+               dL1 = np.ones_like(self.biases)
+               dL1[self.biases < 0] = -1
+               self.dbiases += self.bias_regularizer_l1 * dL1
           if self.bias_regularizer_l2 > 0:
-              self.dbiases += 2 * self.bias_regularizer_l2 * \
-                              self.biases
+               self.dbiases += 2 * self.bias_regularizer_l2 * self.biases
           self.dinputs = np.dot(dvalues, self.weights.T)
      def get_parameter(self): # getter
           return self.weights , self.biases
@@ -70,11 +73,15 @@ class Dense_Layer:
 
 class Layer_Dropout:
      def __init__(self , rate):
-          self.rate = 1 - rate
-     def forward(self , inputs , training):
+          self.rate = 1 - rate # the success rate
+     def forward(self , inputs):
           self.inputs = inputs
-          if not training :
-               print()
+          
+          self.binray_mask = np.random.binomial(1 , self.rate , size = inputs.shape) / self.rate
+          self.outputs = inputs * self.binray_mask
+          
+     def backward(self , dvalues):
+          self.dinputs = dvalues * self.binray_mask
 class Layer_Input:
      def forward(self, inputs, training):
         self.output = inputs
@@ -108,6 +115,21 @@ class Loss:
           sample_losses = self.forward(output , y)
           data_loss = np.mean(sample_losses)
           return data_loss
+     def regularization_loss(self , layer):
+          regularization_loss = 0 # default value
+          if layer.weight_regularizer_l1 > 0 :
+               regularization_loss += layer.weight_regularizer_l1 * np.sum(np.abs(layer.weights))
+          
+          if layer.weight_regularizer_l2 > 0 :
+               regularization_loss += layer.weight_regularizer_l2 * np.sum(layer.weights * layer.weights)
+          # for biases
+          if layer.bias_regularizer_l1 > 0 :
+               regularization_loss += layer.bias_regularizer_l1 * np.sum(layer.biases)
+               
+          if layer.bias_regularizer_l2 > 0 :
+               regularization_loss += layer.bias_regularizer_l2 * np.sum(layer.biases * layer.biases)
+               
+          return regularization_loss
 class Loss_categoricalCrossEntropy(Loss):
      def forward(self , y_pred , y_true):
           samples = len(y_pred)
@@ -146,6 +168,30 @@ class Activation_Softmax:
                single_output = single_output.reshape(-1 , 1)
                jacobian_mat = np.diagflat(single_output) - np.dot(single_output , single_output.T)
                self.dinputs[i] = np.dot(jacobian_mat , single_dvalues)
+class Activation_Sigmoid:
+     def forward(self , inputs):
+          self.inputs = inputs
+          self.outputs = 1 / (1 + np.exp(-inputs))
+          
+     def backward(self , dvalues):
+          self.dinputs = dvalues * (1 - self.outputs) * self.outputs
+          
+class Loss_BinrayCrossentropy(Loss):
+     def forward(self , y_pred , y_true):
+          
+          y_pred_clipped = np.clip(y_pred , 1e-7 , 1 - 1e-7)
+          
+          sample_losses = -(y_ture * np.log(y_pred_clipped) + (1 - y_true) * np.log(1 - y_pred_clipped))
+          sample_losses = np.mean(sample_losses , axis=-1)
+          return sample_losses
+     def backward(self , dvalues , y_true):
+          
+          samples = len(dvalues)
+          outputs = len(dvalues[0])
+          
+          clipped_dvalues = np.clip(dvalues, 1e-7, 1 - 1e-7)
+          self.dinputs = -(y_true / clipped_dvalues - (1 - y_true) / (1 - clipped_dvalues)) / outputs
+          self.dinputs = self.dinputs / samples
 class Activation_Softmax_Loss_CategoricalCrossEntropy():
      def __init__(self):
           self.activation = Activation_Softmax()
