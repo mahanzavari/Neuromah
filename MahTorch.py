@@ -37,16 +37,63 @@ do not learn the underlying function on their own
 class Model:
      def __init__(self):
           self.layers = []
+          self.softmax_classifier_output = None
      def add(self , layer):
           self.layers.append(layer)
-     def set(self , * , loss , optimizer): # * means that the sunsequent parameters are keyword arguments
+     def set(self , * , loss , optimizer , accuracy): # * means that the sunsequent parameters are keyword arguments
           self.loss = loss
           self.optimizer = optimizer
-     def train(self , X , y , * , epochs =1 , verbose=1):
+          self.accuracy = accuracy 
+     def train(self , X , y , * , epochs =1 , verbose=1 , validation_data = None):
+          self.accuracy.init(y)
+          
           for epoch in range(1 , epochs + 1):
-               output = self.forward(X)
-               print(output)
-               exit()
+               output = self.forward(X , training = True)
+               # loss calculation
+               data_loss , regularization_loss = self.loss.calculate(output , y)
+               loss = data_loss + regularization_loss
+               # Gradient
+               predictions = self.output_layer_activation.predictions(output)
+               
+               accuracy = self.accuracy.calculate(predictions , y)
+               # backward pass
+               self.backward(output , y)
+               
+               # optimizing 
+               self.optimizer.pre_update_params()
+               for layer in self.trainable_layers:
+                    self.optimizer.update_params(layer)
+               self.optimizer.post_update_params()
+               
+               if not epoch % verbose:
+                    print(f'epoch: {epoch}, ' +
+                          f'acc: {accuracy:.3f}, ' +
+                          f'Loss: {loss:.3f} (' +
+                          f'data_loss: {data_loss:.3f}, ' +
+                          f'regularizer_loss: {regularization_loss:.3f}), ' +
+                          f'learning rate: {self.optimizer.current_learning_rate}')
+               if validation_data is not None:
+                    X_val , y_val = validation_data
+                    output = self.forward(X_val , training=False)
+                    loss = self.loss.caculate(output , y_val)
+                    
+                    predictions = self.output_layer_activation.predictions(output)
+                    accuracy = self.accuracy.caculate(predictions , y_val)
+                    
+                    print(f"validation, " + f"acc: {accuracy:.3f}, " + f"loss: {loss:.3f}")
+     def forward(self , X , training):
+          self.input_layer.forward(X)
+          
+          for layer in self.layers:
+               layer.forward(layer.prev.output , training) 
+               
+          return layer.output
+     
+     def backward(self , output , y):
+          # just like the first call in forward pass except it starts from the loss 
+          self.loss.backward(output , y)
+          for layer in  reversed(self.layers):
+               layer.backward(layer.next.dinputs)
      def finalize(self):
           # setting the Input Layer
           self.input_layer = Layer_Input()
@@ -63,9 +110,21 @@ class Model:
                else: # the last layer
                     self.layers[i].prev = self.layers[i - 1]
                     self.layers[i].next = self.loss
+                    self.output_layer_activation = self.layers[i]
           # if a layer contains an attribute called "weights" then it's trainable
                if hasattr(self.layers[i] , 'weights'):
                     self.trainable_layers.append(self.layers[i]) 
+                    
+          # If output activation is Softmax and
+          # loss function is Categorical Cross-Entropy
+          # create an object of combined activation
+          # and loss function containing
+          # faster gradient calculation
+          if isinstance(self.layers[-1], Activation_Softmax) and \
+               isinstance(self.loss, Loss_categoricalCrossEntropy):
+               # Create an object of combined activation
+               # and loss functions
+               self.softmax_classifier_output = Activation_Softmax_Loss_CategoricalCrossEntropy()
      def forward(self , X):
           self.input_layer.forward(X)
           # passing the output of the previous object into the current layer 
@@ -73,10 +132,6 @@ class Model:
                layer.forward(layer.prev.output)
           # returning the last layer's output
           return layer.output
-          
-class Layer_Input: 
-     def forward(self, inputs):
-          self.output = inputs
 class Layer_Dense:
      def __init__(self, num_inputs, num_neurons, weight_regularizer_l1=0, weight_regularizer_l2=0, bias_regularizer_l1=0, bias_regularizer_l2=0):
           self.weights = 0.01 * np.random.randn(num_inputs , num_neurons) # 0.01 == so as to speed up the training
@@ -115,12 +170,36 @@ class Layer_Dense:
           self.biases = biases
           self.weights = weights
 
+class Accuracy:
+     def calculate(self , predictions , y):
+          comparisons = self.compare(predictions , y)
+          accuracy = np.mean(comparisons)
+          return accuracy
+class Accuracy_Regression(Accuracy):
+     def __init__(self):
+          self.precision = None
+     def init(self , y , reinit=False):
+          if self.precision is None or reinit:
+               self.precision = np.std(y) / 250
+     def compare(self , predictions , y):
+          return np.absolute(predictions - y) < self.precision
+     
+class Accuracy_Categorical(Accuracy):
+     def __init__(self):
+          pass
+     def compare(self , predictions , y):
+          if len(y.shape) == 2:
+               y = np.argmax(y , axis=1)
+          return predictions == y
 class Layer_Dropout:
      def __init__(self , rate):
           self.rate = 1 - rate # the success rate
-     def forward(self , inputs):
+     def forward(self , inputs ,training):
           self.inputs = inputs
           
+          if not training:
+               self.output = inputs.copy()
+               return
           self.binray_mask = np.random.binomial(1 , self.rate , size = inputs.shape) / self.rate
           self.outputs = inputs * self.binray_mask
           
@@ -129,7 +208,10 @@ class Layer_Dropout:
 class Layer_Input:
      def forward(self, inputs, training):
         self.output = inputs
+
 class ReLU_Activation:
+     def predictions(self , outputs):
+          return outputs # just for completeness
      def forward(self , inputs):
           self.inputs = inputs
           self.output = np.maximum(0, inputs)
@@ -137,27 +219,13 @@ class ReLU_Activation:
           # copy for modifying
           self.dinputs = dvalues.copy()
           self.dinputs[self.inputs <= 0 ] = 0 # zero grad where inputs  
-class Softmax_Activation:
-     def forward(self , inputs):
-          exp_values = np.exp(inputs - np.max(inputs , axis=1 , keepdims=True))
-          probabilities = exp_values / np.sum(exp_values, axis=1,
-                                            keepdims=True)
-          self.output = probabilities
-     def backward(self, dvalues):
-         self.dinputs = np.empty_like(dvalues)
-         for index, (single_output, single_dvalues) in \
-                 enumerate(zip(self.output, dvalues)):
-             single_output = single_output.reshape(-1, 1)
-             jacobian_matrix = np.diagflat(single_output) - \
-                               np.dot(single_output, single_output.T)
-             self.dinputs[index] = np.dot(jacobian_matrix,
-                                          single_dvalues)
-     def predictions(self, outputs):
-         return np.argmax(outputs, axis=1)
+
 class Loss:
-     def calculate(self , output , y):
+     def calculate(self , output , y , * , regularization = False):
           sample_losses = self.forward(output , y)
           data_loss = np.mean(sample_losses)
+          if not regularization:
+               return data_loss
           return data_loss , self.regularization_loss()
      def remember_trainable_layers(self , trainable_layers): # notifies the Loss class which layers are trainable
           self.trainable_layers = trainable_layers
@@ -203,6 +271,8 @@ class Loss_categoricalCrossEntropy(Loss):
           self.dinputs = -y_true / dvalues # np.divide[x , y]
           self.dinputs = self.dinputs / samples_num
 class Activation_Softmax:
+     def predictions(self , outputs):
+          return np.argmax(outputs , axis = 1)
      def forward(self , inputs , training):
           self.inputs = inputs
           exp_values = np.exp(inputs - np.max(inputs, axis=1,keepdims=True))
@@ -215,6 +285,8 @@ class Activation_Softmax:
                jacobian_mat = np.diagflat(single_output) - np.dot(single_output , single_output.T)
                self.dinputs[i] = np.dot(jacobian_mat , single_dvalues)
 class Activation_Sigmoid:
+     def predictions(self , outputs):
+          return (outputs > 0.5) * 1
      def forward(self , inputs):
           self.inputs = inputs
           self.outputs = 1 / (1 + np.exp(-inputs))
@@ -223,6 +295,8 @@ class Activation_Sigmoid:
           self.dinputs = dvalues * (1 - self.outputs) * self.outputs
 
 class Activation_Linear:
+     def predictions(self , outputs):
+          return outputs
      def forward(self , inputs):
           self.inputs = inputs
           self.outputs = inputs
