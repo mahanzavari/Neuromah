@@ -1,5 +1,5 @@
 import numpy as np
-
+from typing import Dict , Tuple
 
 class Layer_Dense:
 
@@ -54,8 +54,11 @@ class Layer_Dense:
         self.dinputs = np.dot(dvalues, self.weights.T)
 
     # Retrieve layer parameters
-    def get_parameters(self):
-        return self.weights, self.biases
+    def get_parameters(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
+        return {
+            'weights' : (self.weights , self.dweights),
+            'biases' : (self.biases , self.dbiases)
+        }
 
     # Set weights and biases in a layer instance
     def set_parameters(self, weights, biases):

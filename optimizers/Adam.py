@@ -1,4 +1,5 @@
 import numpy as np
+from typing import Dict
 
 class Optimizer_Adam:
     """
@@ -17,7 +18,6 @@ class Optimizer_Adam:
         beta_2 (float): The exponential decay rate for the second moment estimates.
     """
 
-    # Initialize optimizer - set settings
     def __init__(self, learning_rate=0.001, decay=0., epsilon=1e-7,
                  beta_1=0.9, beta_2=0.999):
         self.learning_rate = learning_rate
@@ -27,8 +27,9 @@ class Optimizer_Adam:
         self.epsilon = epsilon
         self.beta_1 = beta_1
         self.beta_2 = beta_2
+        self.momentums = {}
+        self.caches = {}
 
-    # Call once before any parameter updates
     def pre_update_params(self):
         """
         Adjusts the learning rate if decay is applied.
@@ -36,8 +37,7 @@ class Optimizer_Adam:
         if self.decay:
             self.current_learning_rate = self.learning_rate * \
                 (1. / (1. + self.decay * self.iterations))
-
-    # Update parameters
+        # no assumption is made about the Layers parameter in order to make it a generic code
     def update_params(self, layer):
         """
         Updates the layer's parameters using the Adam algorithm.
@@ -45,53 +45,64 @@ class Optimizer_Adam:
         Args:
             layer: The layer whose parameters (weights and biases) are to be updated.
         """
+        if not (0 <= self.beta_1 < 1) or not (0 <= self.beta_2 < 1):
+            raise ValueError("beta values must be in the interval [0 , 1)")
+        
+        if not hasattr(layer, 'get_parameters') or not callable(getattr(layer, 'get_parameters')):
+            raise AttributeError("Layer must have a get_parameters method")
+        
+        parameters = layer.get_parameters()
 
-        # If layer does not contain cache arrays,
-        # create them filled with zeros
-        if not hasattr(layer, 'weight_cache'):
-            layer.weight_momentums = np.zeros_like(layer.weights)
-            layer.weight_cache = np.zeros_like(layer.weights)
-            layer.bias_momentums = np.zeros_like(layer.biases)
-            layer.bias_cache = np.zeros_like(layer.biases)
+        if not isinstance(parameters, Dict):
+            raise TypeError("The get_parameters method must return a dictionary")
+        
+        for param_name, param_values in parameters.items():
+            if not isinstance(param_name, str):
+                raise ValueError("Parameter name must be a string")
+            if not isinstance(param_values, tuple) or len(param_values) != 2:
+                raise ValueError("The parameter values must be in tuples")
+            # if np.any(np.isnan(gradient)) or np.any(np.isinf(gradient)):
+            #     raise ValueError("Gradients contain NaN/inf values.")
 
+            param, gradient = param_values
+            if not isinstance(param, np.ndarray) or not isinstance(gradient, np.ndarray):
+                raise ValueError("The parameters and gradients must be numpy arrays")
+            if param.shape != gradient.shape:
+                raise ValueError("The parameter and gradient must have the same shape")
 
-        # Update momentum  with current gradients
-        layer.weight_momentums = self.beta_1 * \
-                                 layer.weight_momentums + \
-                                 (1 - self.beta_1) * layer.dweights
-        layer.bias_momentums = self.beta_1 * \
-                               layer.bias_momentums + \
-                               (1 - self.beta_1) * layer.dbiases
-        # Get corrected momentum
-        # self.iteration is 0 at first pass
-        # and we need to start with 1 here
-        weight_momentums_corrected = layer.weight_momentums / \
-            (1 - self.beta_1 ** (self.iterations + 1))
-        bias_momentums_corrected = layer.bias_momentums / \
-            (1 - self.beta_1 ** (self.iterations + 1))
-        # Update cache with squared current gradients
-        layer.weight_cache = self.beta_2 * layer.weight_cache + \
-            (1 - self.beta_2) * layer.dweights**2
-        layer.bias_cache = self.beta_2 * layer.bias_cache + \
-            (1 - self.beta_2) * layer.dbiases**2
-        # Get corrected cache
-        weight_cache_corrected = layer.weight_cache / \
-            (1 - self.beta_2 ** (self.iterations + 1))
-        bias_cache_corrected = layer.bias_cache / \
-            (1 - self.beta_2 ** (self.iterations + 1))
+            if param_name not in self.momentums:
+                self.momentums[param_name] = np.zeros_like(param)
+                self.caches[param_name] = np.zeros_like(param)
 
-        # Vanilla SGD parameter update + normalization
-        # with square rooted cache
-        layer.weights += -self.current_learning_rate * \
-                         weight_momentums_corrected / \
-                         (np.sqrt(weight_cache_corrected) +
-                             self.epsilon)
-        layer.biases += -self.current_learning_rate * \
-                         bias_momentums_corrected / \
-                         (np.sqrt(bias_cache_corrected) +
-                             self.epsilon)
+            # Update momentums and caches
+            self.momentums[param_name] = (
+                self.beta_1 * self.momentums[param_name] + (1.0 - self.beta_1) * gradient
+            )
+            self.caches[param_name] = (
+                self.beta_2 * self.caches[param_name] + (1.0 - self.beta_2) * gradient ** 2
+            )
 
-    # Call once after any parameter updates
+            # Bias correction
+            m_hat = self.momentums[param_name] / (1.0 - self.beta_1 ** (self.iterations + 1))
+            v_hat = self.caches[param_name] / (1.0 - self.beta_2 ** (self.iterations + 1))
+
+            # Update parameters
+            param -= (
+                self.current_learning_rate * m_hat / (np.sqrt(v_hat) + self.epsilon)
+            )
+            
+        def get_state(self):
+            return {
+                'momentums' : self.momentums,
+                'caches' : self.caches,
+                'iterations' : self.iterations
+            }
+        
+        def laod_state(self , state: Dict[str , any]):
+            self.momentums = state['momentums']
+            self.cache = state['cache']
+            self.iterations = state['iterations']
+
     def post_update_params(self):
         """
         Increments the iteration count after parameter updates.

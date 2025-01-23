@@ -1,0 +1,151 @@
+1.update the get_parameters from the code
+2.add AMSGrad into adam optimizer\
+
+
+
+
+Handling **exploding gradients** and **zero gradients** (or vanishing gradients) is critical for training deep neural networks effectively. Below are common strategies and how they are implemented in popular frameworks like TensorFlow, PyTorch, and others.
+
+---
+
+### **1. Exploding Gradients**
+Exploding gradients occur when gradients grow uncontrollably, causing parameter updates to overshoot optimal values. This is common in **RNNs**, **deep networks**, or networks with poorly initialized weights.
+
+#### **Solutions**:
+1. **Gradient Clipping**:
+   - **Clip by Value**: Force gradients to stay within a predefined range.
+     ```python
+     gradient = np.clip(gradient, -clip_value, clip_value)
+     ```
+   - **Clip by Norm**: Scale gradients if their norm exceeds a threshold.
+     ```python
+     max_norm = 1.0
+     grad_norm = np.linalg.norm(gradient)
+     if grad_norm > max_norm:
+         gradient = gradient * (max_norm / grad_norm)
+     ```
+
+2. **Weight Initialization**:
+   - Use initialization schemes like **He initialization** (for ReLU) or **Xavier initialization** to prevent initial gradient explosions.
+
+3. **Normalization Layers**:
+   - Use **Batch Normalization** or **Layer Normalization** to stabilize activations and gradients.
+
+4. **Smaller Learning Rates**:
+   - Reduce the learning rate to limit the impact of large gradients.
+
+#### **Framework Implementations**:
+- **TensorFlow**:
+  ```python
+  # Clip by value
+  gradients = tf.clip_by_value(gradients, -1.0, 1.0)
+  # Clip by norm
+  gradients, _ = tf.clip_by_global_norm(gradients, max_norm=5.0)
+  ```
+- **PyTorch**:
+  ```python
+  torch.nn.utils.clip_grad_value_(model.parameters(), clip_value=1.0)
+  torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
+  ```
+
+---
+
+### **2. Zero/Vanishing Gradients**
+Vanishing gradients occur when gradients become extremely small, causing parameters to stop updating. This is common in **deep networks** and **LSTMs/RNNs**.
+
+#### **Solutions**:
+1. **Activation Functions**:
+   - Use **ReLU**, **Leaky ReLU**, or **Swish** instead of `sigmoid`/`tanh` to avoid saturation.
+
+2. **Residual Connections (ResNet)**:
+   - Add skip connections to allow gradients to flow through shortcuts.
+
+3. **Weight Initialization**:
+   - Use **He** or **Xavier** initialization to match the activation function.
+
+4. **Normalization Layers**:
+   - **Batch Normalization** or **Layer Normalization** ensures activations stay in a healthy range.
+
+5. **Architecture Design**:
+   - Use **LSTM** or **GRU** instead of vanilla RNNs to mitigate vanishing gradients in sequence models.
+
+#### **Framework Implementations**:
+- All frameworks natively support **ReLU**, **BatchNorm**, and **Residual Connections**:
+  ```python
+  # PyTorch Example
+  self.block = nn.Sequential(
+      nn.Linear(100, 100),
+      nn.BatchNorm1d(100),
+      nn.LeakyReLU(),
+      nn.Linear(100, 100)
+  )
+  ```
+
+---
+
+### **3. Advanced Techniques**
+1. **Gradient Penalty (WGAN-GP)**:
+   - Adds a penalty on the gradient norm to enforce Lipschitz continuity (used in GANs).
+   - Implemented in frameworks via custom loss functions.
+
+2. **Gradient Noise**:
+   - Add small noise to gradients to escape saddle points:
+     ```python
+     gradient += np.random.normal(0, 0.01, gradient.shape)
+     ```
+
+3. **Learning Rate Warmup**:
+   - Gradually increase the learning rate during early training steps (common in transformers).
+
+---
+
+### **4. Code Integration in Your Optimizer**
+To handle exploding gradients in your Adam optimizer, add **gradient clipping**:
+
+```python
+class Optimizer_Adam:
+    def __init__(self, ..., clip_norm=None, clip_value=None):
+        self.clip_norm = clip_norm
+        self.clip_value = clip_value
+
+    def update_params(self, layer):
+        # ... existing code ...
+        gradient = param_values[1]
+
+        # Gradient Clipping
+        if self.clip_value is not None:
+            gradient = np.clip(gradient, -self.clip_value, self.clip_value)
+        if self.clip_norm is not None:
+            grad_norm = np.linalg.norm(gradient)
+            if grad_norm > self.clip_norm:
+                gradient *= self.clip_norm / (grad_norm + 1e-7)
+
+        # Proceed with Adam update
+        self.momentums[param_name] = ...
+```
+
+---
+
+### **How Frameworks Handle This**
+1. **TensorFlow/PyTorch**:
+   - Provide built-in clipping functions and normalization layers.
+   - Automatically handle initialization (e.g., Keras uses `glorot_uniform` by default).
+   - Support advanced architectures (Transformers, ResNets) with built-in modules.
+
+2. **User Responsibility**:
+   - Frameworks give you the tools (e.g., `clip_grad_norm_`), but you must apply them explicitly during training loops:
+     ```python
+     # PyTorch Training Loop
+     optimizer.zero_grad()
+     loss.backward()
+     torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+     optimizer.step()
+     ```
+
+---
+
+### **Key Takeaways**
+- **Exploding Gradients**: Use clipping, normalization, and careful initialization.
+- **Vanishing Gradients**: Use skip connections, better activations, and normalization.
+- **Frameworks**: Provide tools, but you must apply them in training loops.
+- **Code**: Add clipping logic directly to your optimizer or training loop.

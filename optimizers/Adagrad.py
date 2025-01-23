@@ -1,4 +1,5 @@
 import numpy as np
+from typing import Dict , Tuple
 
 class Optimizer_Adagrad:
     """
@@ -23,6 +24,7 @@ class Optimizer_Adagrad:
         self.decay = decay
         self.iterations = 0
         self.epsilon = epsilon
+        self.momentums = {}
 
     # Call once before any parameter updates
     def pre_update_params(self):
