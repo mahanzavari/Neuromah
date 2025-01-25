@@ -20,6 +20,9 @@ class Optimizer_Adam:
 
     def __init__(self, learning_rate=0.001, decay=0., epsilon=1e-7,
                  beta_1=0.9, beta_2=0.999):
+        if not (0 <= self.beta_1 < 1) or not (0 <= self.beta_2 < 1):
+            raise ValueError("beta values must be in the interval [0 , 1)")
+        # add warning for unlogical values
         self.learning_rate = learning_rate
         self.current_learning_rate = learning_rate
         self.decay = decay
@@ -45,8 +48,6 @@ class Optimizer_Adam:
         Args:
             layer: The layer whose parameters (weights and biases) are to be updated.
         """
-        if not (0 <= self.beta_1 < 1) or not (0 <= self.beta_2 < 1):
-            raise ValueError("beta values must be in the interval [0 , 1)")
         
         if not hasattr(layer, 'get_parameters') or not callable(getattr(layer, 'get_parameters')):
             raise AttributeError("Layer must have a get_parameters method")

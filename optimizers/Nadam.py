@@ -31,8 +31,7 @@ class Optimizer_Nadam:
                  beta1: float = 0.9, 
                  beta2: float = 0.999, 
                  epsilon: float = 1e-8) -> None:
-        """Initialize Nadam optimizer with specified parameters."""
-        # Validate input types and values
+        # Input and params validations
         if not isinstance(learning_rate, (int, float)):
             raise TypeError("learning_rate must be a number")
         if learning_rate <= 0:

@@ -18,7 +18,7 @@ class Optimizer_RMSprop:
     """
 
     def __init__(self, learning_rate: float = 0.001, decay: float = 0., epsilon: float = 1e-7, rho: float = 0.9):
-        # Validate hyperparameters
+        # Input and params validations
         if not isinstance(learning_rate, (float, int)) or learning_rate <= 0:
             raise ValueError("learning_rate must be a positive float.")
         if not isinstance(decay, (float, int)) or decay < 0:

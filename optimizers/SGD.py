@@ -1,5 +1,5 @@
 import numpy as np
-
+from typing import Dict, Tuple, Union
 
 class Optimizer_SGD:
     """
@@ -13,9 +13,10 @@ class Optimizer_SGD:
         current_learning_rate (float): The current learning rate, which can be adjusted by decay.
         decay (float): The decay rate for the learning rate.
         iterations (int): The number of iterations performed.
-        momentum (float): The momentum factor, if momentum is used.
+        momentum_factor (float): The momentum factor, if momentum is used.
+        momentums (Dict[str, np.ndarray]): Stores momentum values for each parameter.
     """
-    def __init__(self, learning_rate=1., decay=0., momentum=0.):
+    def __init__(self, learning_rate: Union[int, float] = 1., decay: Union[int, float] = 0., momentum: Union[int, float] = 0.):
         """
         Initializes the SGD optimizer.
 
@@ -24,36 +25,33 @@ class Optimizer_SGD:
             decay (float): The decay rate for the learning rate. Default is 0.0.
             momentum (float): The momentum factor. Default is 0.0.
         """
-        if not isinstance(learning_rate , (int , float)):
-            raise TypeError("learning rate must be a number")
+        if not isinstance(learning_rate, (int, float)):
+            raise TypeError(f"learning_rate must be a number, got {type(learning_rate)}")
         if learning_rate <= 0:
-            raise ValueError("learning rate should be a positive number")
+            raise ValueError(f"learning_rate should be a positive number, got {learning_rate}")
         if not isinstance(decay, (int, float)):
-            raise TypeError("decay must be a number")
+            raise TypeError(f"decay must be a number, got {type(decay)}")
         if decay < 0:
-            raise ValueError("decay must be non-negative")
-
+            raise ValueError(f"decay must be non-negative, got {decay}")
         if not isinstance(momentum, (int, float)):
-            raise TypeError("momentum must be a number")
+            raise TypeError(f"momentum must be a number, got {type(momentum)}")
         if momentum < 0:
-            raise ValueError("momentum must be non-negative")
-        
+            raise ValueError(f"momentum must be non-negative, got {momentum}")
+
         self.learning_rate = learning_rate
         self.current_learning_rate = learning_rate
         self.decay = decay
         self.iterations = 0
-        self.momentum = momentum
+        self.momentum_factor = momentum
+        self.momentums = {}
 
-    # Is called before any parameter updates
     def pre_update_params(self):
         """
         Adjusts the learning rate if decay is applied.
         """
         if self.decay:
-            self.current_learning_rate = self.learning_rate * \
-                (1. / (1. + self.decay * self.iterations))
+            self.current_learning_rate = self.learning_rate * (1. / (1. + self.decay * self.iterations))
 
-    # Update parameters
     def update_params(self, layer):
         """
         Updates the layer's parameters using the SGD algorithm.
@@ -61,44 +59,39 @@ class Optimizer_SGD:
         Args:
             layer: The layer whose parameters (weights and biases) are to be updated.
         """
-        if not hasattr(layer , "dweights") or not hasattr(layer , 'dbiases'):
-            raise AttributeError('Layer Object must have weights and biases')
-        if self.momentum:
+        if not hasattr(layer, 'get_parameters') or not callable(getattr(layer, 'get_parameters')):
+            raise AttributeError(f"The layer: {layer} does not implement get_parameters method")
 
-            # If layer does not contain momentum arrays, create them
-            # filled with zeros
-            if not hasattr(layer, 'weight_momentums'): # or hasatrr(layer , 'bias_momentums'):
-                layer.weight_momentums = np.zeros_like(layer.weights)
-                layer.bias_momentums = np.zeros_like(layer.biases)
+        parameters = layer.get_parameters()
+        if not isinstance(parameters, Dict):
+            raise TypeError(f"The get_parameters() method should return a Dict")
 
-            # Build weight updates with momentum - take previous
-            # updates multiplied by retain factor and update with
-            # current gradients
-            weight_updates = \
-                self.momentum * layer.weight_momentums - \
-                self.current_learning_rate * layer.dweights
-            layer.weight_momentums = weight_updates
+        for param_name, param_values in parameters.items():
+            if not isinstance(param_name, str):
+                raise TypeError(f"The parameter name for the layer:{layer} should be a string")
+            if not isinstance(param_values, Tuple) or len(param_values) != 2:
+                raise ValueError("The parameter values must be a tuple: (parameter, gradients)")
 
-            # Build bias updates
-            bias_updates = \
-                self.momentum * layer.bias_momentums - \
-                self.current_learning_rate * layer.dbiases
-            layer.bias_momentums = bias_updates
+            param, gradients = param_values
+            if not isinstance(param, np.ndarray) or not isinstance(gradients, np.ndarray):
+                raise TypeError("The parameters and gradients for the layer must be numpy arrays")
+            if param.shape != gradients.shape:
+                raise ValueError("Parameter and gradient must have the same shape")
+            if np.any(np.isnan(gradients)):
+                raise ValueError(f"Gradient for '{param_name}' contains NaN values.")
+            if np.any(np.isinf(gradients)):
+                raise ValueError(f"Gradient for '{param_name}' contains Inf values.")
 
+            if self.momentum_factor:
+                if param_name not in self.momentums:
+                    self.momentums[param_name] = np.zeros_like(param)
+                self.momentums[param_name] = (
+                    self.momentums[param_name] * self.momentum_factor + self.current_learning_rate * gradients
+                )
+                param += -self.momentums[param_name]
+            else:
+                param += -self.current_learning_rate * gradients
 
-        # Vanilla SGD updates
-        else:
-            weight_updates = -self.current_learning_rate * \
-                             layer.dweights
-            bias_updates = -self.current_learning_rate * \
-                           layer.dbiases
-
-        # Update weights and biases using either
-        # vanilla or momentum updates
-        layer.weights += weight_updates
-        layer.biases += bias_updates
-
-    # Call once after any parameter updates
     def post_update_params(self):
         """
         Increments the iteration count after parameter updates.
