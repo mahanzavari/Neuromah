@@ -1,20 +1,14 @@
 import numpy as np
+from core import Activation  
 
-class Activation_Sigmoid:
-
-    # Forward pass
+class Activation_ReLU(Activation):
     def forward(self, inputs, training):
-        # Save input and calculate/save output
-        # of the sigmoid function
         self.inputs = inputs
-        self.output = 1 / (1 + np.exp(-inputs))
+        self.output = np.maximum(0, inputs)
 
-    # Backward pass
     def backward(self, dvalues):
-        # Derivative - calculates from output of the sigmoid function
-        self.dinputs = dvalues * (1 - self.output) * self.output
+        self.dinputs = dvalues.copy()
+        self.dinputs[self.inputs <= 0] = 0  # Gradient is 0 for negative inputs
 
-    # Calculate predictions for outputs
     def predictions(self, outputs):
-        return (outputs > 0.5) * 1
-
+        return outputs  

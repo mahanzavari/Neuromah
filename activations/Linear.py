@@ -1,19 +1,14 @@
 import numpy as np
+from core import Activation  
 
-class Activation_Linear:
-
-    # Forward pass
+class Activation_Linear(Activation):
     def forward(self, inputs, training):
-        # Just remember values
         self.inputs = inputs
         self.output = inputs
 
-    # Backward pass
     def backward(self, dvalues):
-        # derivative is 1, 1 * dvalues = dvalues - the chain rule
-        self.dinputs = dvalues.copy()
+        # Derivative is 1
+        self.dinputs = dvalues.copy()  
 
-    # Calculate predictions for outputs
     def predictions(self, outputs):
-        return outputs
-
+        return outputs  

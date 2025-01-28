@@ -1,27 +1,23 @@
 import numpy as np
-from Neuromah.core import Loss
+from core import Loss
 
-class Loss_MeanAbsoluteError(Loss):  # L1 loss
-
+class Loss_MeanAbsoluteError(Loss): # L1 loss
+    # forward pass
     def forward(self, y_pred, y_true):
 
-        # Calculate loss
-        sample_losses = np.mean(np.abs(y_true - y_pred), axis=-1)
-
-        # Return losses
+        
+        sample_losses = np.mean(np.abs(y_true - y_pred), axis=tuple(range(1, y_pred.ndim)))
         return sample_losses
-
 
     # Backward pass
     def backward(self, dvalues, y_true):
 
         # Number of samples
         samples = len(dvalues)
-        # Number of outputs in every sample
-        # We'll use the first sample to count them
-        outputs = len(dvalues[0])
+        # calculate gradients
+        # d|x| = sign(x) 
+        self.dinputs = np.sign(y_true - dvalues)
 
-        # Calculate gradient
-        self.dinputs = np.sign(y_true - dvalues) / outputs
-        # Normalize gradient
-        self.dinputs = self.dinputs / samples
+        # normalize b the number of samples and shape dimentions product
+        norm_factor = np.prod(dvalues.shape) / samples
+        self.dinputs = self.dinputs / norm_factor

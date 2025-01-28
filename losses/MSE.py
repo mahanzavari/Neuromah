@@ -1,27 +1,24 @@
 import numpy as np
-from Neuromah.core import Loss
+from core import Loss
 
 class Loss_MeanSquaredError(Loss):  # L2 loss
 
-    # Forward pass
+    # forward pass
     def forward(self, y_pred, y_true):
 
         # Calculate loss
-        sample_losses = np.mean((y_true - y_pred)**2, axis=-1)
-
-        # Return losses
+        sample_losses = np.mean((y_true - y_pred)**2, axis=tuple(range(1 , y_pred.ndim)))
         return sample_losses
 
-    # Backward pass
+    # backward pass
     def backward(self, dvalues, y_true):
-
         # Number of samples
         samples = len(dvalues)
-        # Number of outputs in every sample
-        # We'll use the first sample to count them
-        outputs = len(dvalues[0])
-
-        # Gradient on values
-        self.dinputs = -2 * (y_true - dvalues) / outputs
-        # Normalize gradient
-        self.dinputs = self.dinputs / samples
+        # calculate gradient
+        # d(y - x)**2 == -2(y - x)
+        self.dinputs = -2 * (y_true - dvalues)
+        # dvalues.shape == total number of elemnts
+        norm_factor = np.prod(dvalues.shape) / samples
+        # normalization
+        self.dinputs = self.dinputs / norm_factor
+        

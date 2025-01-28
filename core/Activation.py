@@ -1,34 +1,37 @@
-import numpy as np
+class Activation:
+    def forward(self, inputs, training):
+        """
+        Performs the forward pass of the activation function.
 
-class Accuracy:
+        Args:
+            inputs: Input values.
+            training: Boolean flag indicating if the network is in training mode.
 
-    # Calculates an accuracy
-    # given predictions and ground truth values
-    def calculate(self, predictions, y):
+        Raises:
+            NotImplementedError: This method must be implemented by derived classes.
+        """
+        raise NotImplementedError("Derived classes must implement the 'forward' method.")
 
-        # Get comparison results
-        comparisons = self.compare(predictions, y)
+    def backward(self, dvalues):
+        """
+        Performs the backward pass (calculates gradients) of the activation function.
 
-        # Calculate an accuracy
-        accuracy = np.mean(comparisons)
+        Args:
+            dvalues: Gradient of the loss with respect to the output of the activation function.
 
-        # Add accumulated sum of matching values and sample count
-        self.accumulated_sum += np.sum(comparisons)
-        self.accumulated_count += len(comparisons)
+        Raises:
+            NotImplementedError: This method must be implemented by derived classes.
+        """
+        raise NotImplementedError("Derived classes must implement the 'backward' method.")
 
-        # Return accuracy
-        return accuracy
+    def predictions(self, outputs):
+        """
+        Returns the prediction from the output of the activation function.
 
-    # Calculates accumulated accuracy
-    def calculate_accumulated(self):
+        Args:
+            outputs: Output of the activation function.
 
-        # Calculate an accuracy
-        accuracy = self.accumulated_sum / self.accumulated_count
-
-        # Return the data and regularization losses
-        return accuracy
-
-    # Reset variables for accumulated accuracy
-    def new_pass(self):
-        self.accumulated_sum = 0
-        self.accumulated_count = 0
+        Raises:
+            NotImplementedError: This method must be implemented by derived classes.
+        """
+        raise NotImplementedError("Derived classes must implement the 'predictions' method.")
