@@ -14,59 +14,59 @@ class Layer_Conv2D:
     # DocString is AI generated , double check is needed
     """2D Convolutional Layer implementing spatial convolution with optional activation.
      
-     This layer creates convolution filters that are convolved with the input to produce
-     output feature maps. Supports both 'valid' and 'same' padding modes, custom weight
-     initialization, and post-convolution activation functions.
+    This layer creates convolution filters that are convolved with the input to produce
+    output feature maps. Supports both 'valid' and 'same' padding modes, custom weight
+    initialization, and post-convolution activation functions.
  
-     Args:
-         in_channels (int): Number of input channels/dimensions
-         out_channels (int): Number of output channels/filters
-         kernel_size (Union[int, Tuple[int, int]]): Spatial dimensions of the convolution kernel. 
-             Can be single integer for square kernels or (height, width) tuple.
-         stride (Union[int, Tuple[int, int]], optional): Stride of the convolution. 
-             Default: 1 (single integer or (stride_h, stride_w) tuple).
-         padding (str, optional): Padding mode: 'valid' (no padding) or 'same' 
-             (auto-padding to maintain input dimensions). Default: 'valid'.
-         activation (Optional[Callable], optional): Activation function to apply 
-             after convolution. Should implement `forward()` and `backward()` methods.
-             Default: None.
-         weight_initializer (Optional[Callable], optional): Initializer for convolution weights. 
-             If None, uses He initialization with ReLU correction. Default: None.
-         bias_initializer (Optional[Callable], optional): Initializer for bias parameters.
-             If None, initializes biases to zeros. Default: None.
+    Args:
+        in_channels (int): Number of input channels/dimensions
+        out_channels (int): Number of output channels/filters
+        kernel_size (Union[int, Tuple[int, int]]): Spatial dimensions of the convolution kernel. 
+            Can be single integer for square kernels or (height, width) tuple.
+        stride (Union[int, Tuple[int, int]], optional): Stride of the convolution. 
+            Default: 1 (single integer or (stride_h, stride_w) tuple).
+        padding (str, optional): Padding mode: 'valid' (no padding) or 'same' 
+            (auto-padding to maintain input dimensions). Default: 'valid'.
+        activation (Optional[Callable], optional): Activation function to apply 
+            after convolution. Should implement `forward()` and `backward()` methods.
+            Default: None.
+        weight_initializer (Optional[Callable], optional): Initializer for convolution weights. 
+            If None, uses He initialization with ReLU correction. Default: None.
+        bias_initializer (Optional[Callable], optional): Initializer for bias parameters.
+            If None, initializes biases to zeros. Default: None.
+
+    Attributes:
+        weights (np.ndarray): Learnable convolution filters of shape 
+            (out_channels, in_channels, kernel_h, kernel_w)
+        biases (np.ndarray): Learnable bias terms of shape (out_channels, 1)
+        weight_gradients (np.ndarray): Gradient buffer for weights (same shape as weights)
+        bias_gradients (np.ndarray): Gradient buffer for biases (same shape as biases)
+        dinputs (np.ndarray): Gradient buffer for inputs (same shape as original inputs)
  
-     Attributes:
-         weights (np.ndarray): Learnable convolution filters of shape 
-             (out_channels, in_channels, kernel_h, kernel_w)
-         biases (np.ndarray): Learnable bias terms of shape (out_channels, 1)
-         weight_gradients (np.ndarray): Gradient buffer for weights (same shape as weights)
-         bias_gradients (np.ndarray): Gradient buffer for biases (same shape as biases)
-         dinputs (np.ndarray): Gradient buffer for inputs (same shape as original inputs)
+    Raises:
+        ValueError: If invalid padding mode specified or kernel dimensions are non-positive
  
-     Raises:
-         ValueError: If invalid padding mode specified or kernel dimensions are non-positive
+    Examples:
+        >>> # Create convolutional layer with ReLU activation
+        >>> conv = Layer_Conv2D(
+        ...     in_channels=3,
+        ...     out_channels=64,
+        ...     kernel_size=3,
+        ...     padding='same',
+        ...     activation=ReLU(),
+        ...     weight_initializer=HeNormal()
+        ... )
+        >>> # Forward pass (input shape: [batch, channels, height, width])
+        >>> output = conv.forward(input_data)
+        >>> # Backward pass
+        >>> conv.backward(upstream_gradients)
  
-     Examples:
-         >>> # Create convolutional layer with ReLU activation
-         >>> conv = Layer_Conv2D(
-         ...     in_channels=3,
-         ...     out_channels=64,
-         ...     kernel_size=3,
-         ...     padding='same',
-         ...     activation=ReLU(),
-         ...     weight_initializer=HeNormal()
-         ... )
-         >>> # Forward pass (input shape: [batch, channels, height, width])
-         >>> output = conv.forward(input_data)
-         >>> # Backward pass
-         >>> conv.backward(upstream_gradients)
- 
-     Note:
-         - Input shape: (batch_size, in_channels, height, width) [NCHW format]
-         - Output shape: (batch_size, out_channels, out_height, out_width)
-         - 'same' padding adds symmetric padding to maintain spatial dimensions
-         - Weight initialization automatically adapts to activation function when using
-           default initializer (He initialization for ReLU-family, Glorot otherwise)
+    Note:
+        - Input shape: (batch_size, in_channels, height, width) [NCHW format]
+        - Output shape: (batch_size, out_channels, out_height, out_width)
+        - 'same' padding adds symmetric padding to maintain spatial dimensions
+        - Weight initialization automatically adapts to activation function when using
+          default initializer (He initialization for ReLU-family, Glorot otherwise)
     """
     def __init__(self, in_channels: int, out_channels: int,
                  kernel_size: Union[int, Tuple[int, int]],
