@@ -1,8 +1,12 @@
 import numpy as np
-from core import Loss
+from ..core.Loss import Loss
 
 class Loss_MeanAbsoluteError(Loss): # L1 loss
     # forward pass
+    def __init__(self, model):
+        super().__init__(model)
+        
+    
     def forward(self, y_pred, y_true):
 
         

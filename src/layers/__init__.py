@@ -5,4 +5,5 @@ from .Conv2D import Layer_Conv2D
 # from .BatchNormalization2D import Layer_BatchNormalization2D
 from .MaxPooling2D import Layer_MaxPooling2D
 # from .AveragePooling2D import Layer_AvgPooling2D
-# from .RNN import Layer_RNN, Layer_LSTM, Layer_GRU
+from .RNN import Layer_RNN
+# , Layer_LSTM, Layer_GRU

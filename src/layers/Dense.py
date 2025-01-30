@@ -43,13 +43,14 @@ Parameters
         self.weight_regularizer_l2 = weight_regularizer_l2
         # using regularization for biases is not recommneded and might harm the performance and reduce the model's flexibility
 
-    def forward(self, inputs: np.ndarray, training: bool) -> None:
+    # def forward(self, inputs: np.ndarray, training: bool) -> None:
+    def forward(self, inputs: np.ndarray) -> None:
         self.inputs = inputs
         self.output = np.dot(inputs, self.weights) + self.biases
 
         # Forward pass through activation
         if self.activation is not None:
-            self.activation.forward(self.output, training)
+            self.activation.forward(self.output)
             self.output = self.activation.output 
 
     def backward(self, dvalues: np.ndarray) -> None:

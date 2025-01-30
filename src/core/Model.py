@@ -1,7 +1,7 @@
 import numpy as np
-from layers import Layer_Input
-from activations import Activation_Softmax
-from losses import Loss_CategoricalCrossentropy
+from ..layers import Layer_Input
+from ..activations import Activation_Softmax
+from ..losses import Loss_CategoricalCrossentropy
 import pickle
 import copy
 class Activation_Softmax_Loss_CategoricalCrossentropy():
@@ -32,6 +32,7 @@ class Model:
         # Activation_Softmax classifier's output object
         self.softmax_classifier_output = None
         self.loss = None 
+        self.accuracy = None
     # adding layers
     def add(self, layer):
         self.layers.append(layer)
@@ -80,8 +81,15 @@ class Model:
         # Update loss object with the model reference
         if self.loss is not None:
             # calling loss with self as its arg
-            self.loss = self.loss(self)
-
+            # self.loss = self.loss(self)
+            if isinstance(self.loss , type): # is a class?
+                self.loss = self.loss(model = self)
+            # aleady an instace, leave it 
+        if self.accuracy is not None:
+            # self.accuracy = self.accuracy(self)
+            if isinstance(self.accuracy , type):
+                self.accuracy = self.accuracy(model = self)
+                
         # If output activation is Activation_Softmax and
         # loss function is Categorical Cross-Entropy
         # use Activation_Softmax_Loss_CategoricalCrossentropy for
@@ -258,7 +266,7 @@ class Model:
         # Call forward method of every object in a chain
         # Pass output of the previous object as a parameter
         for layer in self.layers:
-            layer.forward(layer.prev.output, training)
+            layer.forward(layer.prev.output)
 
         # layer is not the last layer, return it's output
         # since it's output is the model's output

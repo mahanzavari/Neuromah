@@ -1,10 +1,12 @@
 import numpy as np
-from core import Activation 
+from ..core.Activation import Activation 
 
 class Activation_ReLU(Activation):
-    def forward(self, inputs, training):
+    # def forward(self, inputs , training: bool):
+    def forward(self, inputs):
         self.inputs = inputs
         self.output = np.maximum(0, inputs)
+
 
     def backward(self, dvalues):
         self.dinputs = dvalues.copy()

@@ -1,7 +1,10 @@
 import numpy as np
-from core import Loss
+from ..core.Loss import Loss
 
 class Loss_MeanSquaredError(Loss):  # L2 loss
+    
+    def __init__(self, model):
+        super().__init__(model)
 
     # forward pass
     def forward(self, y_pred, y_true):

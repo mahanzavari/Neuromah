@@ -1,7 +1,10 @@
 import numpy as np
-from Neuromah.core import Loss
+from ..core.Loss import Loss
 
 class Loss_CategoricalCrossentropy(Loss):
+    def __init__(self, model):
+        super().__init__(model)
+    
     def forward(self, y_pred, y_true):
         # Number of samples in a batch
         samples = len(y_pred)

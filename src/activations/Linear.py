@@ -1,5 +1,5 @@
 import numpy as np
-from core import Activation  
+from ..core.Activation import Activation  
 
 class Activation_Linear(Activation):
     def forward(self, inputs, training):

@@ -1,5 +1,5 @@
 import numpy as np
-from core import Activation 
+from ..core.Activation import Activation 
 
 class Activation_Softmax(Activation):
     def forward(self, inputs, training):
