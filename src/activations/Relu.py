@@ -3,7 +3,7 @@ from ..core.Activation import Activation
 
 class Activation_ReLU(Activation):
     # def forward(self, inputs , training: bool):
-    def forward(self, inputs):
+    def forward(self, inputs , training = False):
         self.inputs = inputs
         self.output = np.maximum(0, inputs)
 

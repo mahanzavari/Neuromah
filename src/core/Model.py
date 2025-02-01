@@ -129,7 +129,8 @@ class Model:
             # Use tqdm for steps within the epoch
             with tqdm(total=train_steps, desc=f'Epoch {epoch}/{epochs}', 
                       bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}', 
-                      dynamic_ncols=True, unit='step') as pbar_steps:
+                      dynamic_ncols=True, unit='step',
+                      colour='green') as pbar_steps:
                 for step in range(train_steps):
                     # Get batch
                     if batch_size is None:
@@ -275,7 +276,7 @@ class Model:
         # Call forward method of every object in a chain
         # Pass output of the previous object as a parameter
         for layer in self.layers:
-            layer.forward(layer.prev.output)
+            layer.forward(layer.prev.output , training)
 
         # layer is not the last layer, return it's output
         # since it's output is the model's output
