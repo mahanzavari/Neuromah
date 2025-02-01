@@ -1,0 +1,94 @@
+    def train(self, X, y, *, epochs=1, batch_size=None,
+              verbose=1, validation_data=None):
+        # accuracy object
+        self.accuracy.init(y)
+        # Default value if batch size is not being set
+        train_steps = 1
+        # Calculate number of steps
+        if batch_size is not None:
+            train_steps = len(X) // batch_size
+            # by using Floor(//) some data might get unused so an increment is needed
+            # to include them
+            if train_steps * batch_size < len(X):
+                train_steps += 1
+            
+        # Main training loop
+        # for epoch in tqdm(range(1 , epochs + 1) , desc='Epochs' , unit='epoch'):
+        for epoch in range(1, epochs+1):
+            print(f'\nepoch: {epoch}')
+            # Reset accumulated values 
+            self.loss.new_pass()
+            self.accuracy.new_pass()
+            # Iterate over steps
+            with tqdm(total=train_steps , desc=f'Epoch {epoch}' , unit='step' , bar_format='{l_bar}{bar:20}{r_bar}{bar:-20b}' , colour= 'blue') as pbar:
+                for step in range(train_steps):
+                    # If batch size is not set - train using one step and full dataset
+                    if batch_size is None:
+                        batch_X = X
+                        batch_y = y
+                    # Otherwise slice a batch
+                    else:
+                        batch_X = X[step*batch_size:(step+1)*batch_size]
+                        batch_y = y[step*batch_size:(step+1)*batch_size]
+                
+                    # Perform forward pass
+                    output = self.forward(batch_X, training=True)
+                    # Calculate loss as a Dict
+                    losses = self.loss.calculate(output , batch_y , include_regularization=True)
+                    data_loss = losses['data_loss']
+                    if "regularization_loss" in losses:
+                        regularization_loss = losses["regularization_loss"]
+                        loss = data_loss + regularization_loss
+                    else:
+                        loss = data_loss # without regularization
+                    # Get predictions and calculate an accuracy
+                    predictions = self.output_layer_activation.predictions(
+                                    output)
+                    accuracy = self.accuracy.calculate(predictions,
+                                                    batch_y)
+                    # Perform backward pass
+                    self.backward(output, batch_y)
+                    # Optimize (update parameters)
+                    self.optimizer.pre_update_params()
+                    for layer in self.trainable_layers:
+                        self.optimizer.update_params(layer)
+                    self.optimizer.post_update_params()
+                    pbar.update(1) # update tqdm
+
+                # Print a summary
+                # if not step % verbose or step == train_steps - 1:
+                #     print(f'step: {step}, ' +
+                #           f'acc: {accuracy:.3f}, ' +
+                #           f'loss: {loss:.3f} (' +
+                #           f'data_loss: {data_loss:.3f}, ' +
+                #           f'reg_loss: {regularization_loss:.3f}), ' +
+                #           f'lr: {self.optimizer.current_learning_rate:.7f}')
+
+            # Get and print epoch loss and accuracy
+            epoch_losses = self.loss.calculate_accumulated(include_regularization=True) 
+            # calculate accuracy for whole training set for this epoch
+            output = self.forward(X , training=False) # forward pass the whole data
+            predictions = self.output_layer_activation.predictions(output)
+            accuracy = self.accuracy.calculate(predictions , y)
+            epoch_data_loss = epoch_losses["data_loss"]
+            # regularization loss check 
+            if "regularization_loss" in epoch_losses:
+                epoch_regularization_loss = epoch_losses["regularization_loss"]
+                epoch_loss = epoch_data_loss + epoch_regularization_loss
+            else: epoch_loss = epoch_data_loss
+            
+            epoch_accuracy = self.accuracy.calculate_accumulated()
+
+            print(f'training, ' +
+                  f'acc: {epoch_accuracy:.3f}, ' +
+                  f'loss: {epoch_loss:.3f} (' +
+                  f'data_loss: {epoch_data_loss:.3f}, ' +
+                  f'reg_loss: {epoch_regularization_loss:.3f}), ' +
+                  f'lr: {self.optimizer.current_learning_rate:.7f}')
+            # use validation?
+            if validation_data is not None:
+                # check here
+                self.evaluate(*validation_data,
+                              batch_size=batch_size)
+    
+    
