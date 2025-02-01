@@ -2,7 +2,8 @@ import numpy as np
 from ..core.Activation import Activation 
 
 class Activation_Softmax(Activation):
-    def forward(self, inputs, training):
+    # def forward(self, inputs, training):
+    def forward(self, inputs):
         self.inputs = inputs
         exp_values = np.exp(inputs - np.max(inputs, axis=1, keepdims=True))
         probabilities = exp_values / np.sum(exp_values, axis=1, keepdims=True)
@@ -17,4 +18,4 @@ class Activation_Softmax(Activation):
 
     def predictions(self, outputs):
         # Index of the largest probability
-        return np.argmax(outputs, axis=1)  
+        return np.argmax(outputs, axis=1)          

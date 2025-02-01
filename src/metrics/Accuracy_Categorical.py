@@ -10,7 +10,7 @@ class Accuracy_Categorical(Accuracy):
           pass
      
 
-     def comare(self , predictions , y):
+     def compare(self , predictions , y):
           if not self.binary and len(y.shape) == 2:
                y = np.argmax(y , axis = 1)
           return np.equal(predictions , y)

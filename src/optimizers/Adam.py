@@ -57,7 +57,9 @@ class Optimizer_Adam:
         if not isinstance(parameters, Dict):
             raise TypeError("The get_parameters method must return a dictionary")
         
-        for param_name, param_values in parameters.items():
+        # for param_name, param_values in parameters.items():
+        for original_param_name , param_values in parameters.items():
+            param_name = f"{id(layer)}_{original_param_name}" # a unique name for each layer parameters
             if not isinstance(param_name, str):
                 raise ValueError("Parameter name must be a string")
             if not isinstance(param_values, tuple) or len(param_values) != 2:
@@ -92,20 +94,22 @@ class Optimizer_Adam:
                 self.current_learning_rate * m_hat / (np.sqrt(v_hat) + self.epsilon)
             )
             
-        def get_state(self):
-            return {
-                'momentums' : self.momentums,
-                'caches' : self.caches,
-                'iterations' : self.iterations
-            }
-        
-        def laod_state(self , state: Dict[str , any]):
-            self.momentums = state['momentums']
-            self.cache = state['cache']
-            self.iterations = state['iterations']
 
     def post_update_params(self):
         """
         Increments the iteration count after parameter updates.
         """
         self.iterations += 1
+        
+        
+    def get_state(self):
+        return {
+            'momentums' : self.momentums,
+            'caches' : self.caches,
+            'iterations' : self.iterations
+        }
+    
+    def laod_state(self , state: Dict[str , any]):
+        self.momentums = state['momentums']
+        self.cache = state['cache']
+        self.iterations = state['iterations']

@@ -53,7 +53,11 @@ class Model:
         # Count all the layer objects
         layer_count = len(self.layers)
         self.trainable_layers = []
-        
+        for layer in self.layers:
+            if hasattr(layer , 'weights'):
+                self.trainable_layers.append(layer)
+                
+                
         # Iterate the objects(layer)
         for i in range(layer_count):
             # If it's the first layer, the previous layer is the input layer
@@ -160,7 +164,7 @@ class Model:
                           f'loss: {loss:.3f} (' +
                           f'data_loss: {data_loss:.3f}, ' +
                           f'reg_loss: {regularization_loss:.3f}), ' +
-                          f'lr: {self.optimizer.current_learning_rate}')
+                          f'lr: {self.optimizer.current_learning_rate:.7f}')
 
             # Get and print epoch loss and accuracy
             epoch_losses = self.loss.calculate_accumulated(include_regularization=True) 
@@ -178,7 +182,7 @@ class Model:
                   f'loss: {epoch_loss:.3f} (' +
                   f'data_loss: {epoch_data_loss:.3f}, ' +
                   f'reg_loss: {epoch_regularization_loss:.3f}), ' +
-                  f'lr: {self.optimizer.current_learning_rate}')
+                  f'lr: {self.optimizer.current_learning_rate:.7f}')
             # use validation?
             if validation_data is not None:
                 # check here
@@ -221,13 +225,15 @@ class Model:
             self.accuracy.calculate(predictions, batch_y)
 
         # Get and print validation loss and accuracy
-        validation_loss = self.loss.calculate_accumulated()
+        # validation_loss = self.loss.calculate_accumulated()
+        validation_losses = self.loss.calculate_accumulated()
+        validation_data_loss = validation_losses['data_loss']
         validation_accuracy = self.accuracy.calculate_accumulated()
 
         # Print a summary
         print(f'validation, ' +
               f'acc: {validation_accuracy:.3f}, ' +
-              f'loss: {validation_loss:.3f}')
+              f'loss: {validation_data_loss:.3f}')
 
     # Predicts on the samples
     def predict(self, X, *, batch_size=None):
