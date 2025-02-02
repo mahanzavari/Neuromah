@@ -2,7 +2,7 @@ import numpy as np
 from ..core.Activation import Activation 
 
 class Activation_Sigmoid(Activation):
-    def forward(self, inputs, training):
+    def forward(self, inputs, training = False):
         self.inputs = inputs
         self.output = 1 / (1 + np.exp(-inputs))
 

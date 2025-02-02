@@ -30,7 +30,6 @@ Parameters
             raise ValueError("n_inputs must be a positive integer")
         if not isinstance(n_neurons, int) or n_neurons <= 0:
             raise ValueError("n_neurons must be a positive integer")
-
         # Initialize weights and biases
         if initializer is None:
             self.weights = 0.01 * np.random.randn(n_inputs, n_neurons)
@@ -44,13 +43,26 @@ Parameters
         # using regularization for biases is not recommneded and might harm the performance and reduce the model's flexibility
 
     # def forward(self, inputs: np.ndarray, training: bool) -> None:
-    def forward(self, inputs: np.ndarray) -> None:
+    def forward(self, inputs: np.ndarray , training : bool) -> None:
+        """
+    Compute the forward pass of the layer.
+    
+    Args:
+        inputs (np.ndarray): Input data of shape (batch_size, n_inputs).
+        training (bool): Whether the layer is in training mode. Affects activation behavior (e.g., dropout).
+        """
+        if not isinstance(inputs , np.ndarray):
+            raise TypeError("inputs must be a numpy array")
+        if inputs.shape[1] != self.weights.shape[0]:
+            raise ValueError(f"Input features mismatch. Expected {self.weights.shape[0]}, got {inputs.shape[1]}")
+        if np.any(np.isnan(inputs)) or np.any(np.isinf(inputs)):
+            raise ValueError("Input contains NaN/Inf values")
         self.inputs = inputs
         self.output = np.dot(inputs, self.weights) + self.biases
 
         # Forward pass through activation
         if self.activation is not None:
-            self.activation.forward(self.output)
+            self.activation.forward(self.output , training = training)
             self.output = self.activation.output 
 
     def backward(self, dvalues: np.ndarray) -> None:

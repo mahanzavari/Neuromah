@@ -3,7 +3,7 @@ from ..core.Activation import Activation
 
 class Activation_Softmax(Activation):
     # def forward(self, inputs, training):
-    def forward(self, inputs):
+    def forward(self, inputs , training = False):
         self.inputs = inputs
         exp_values = np.exp(inputs - np.max(inputs, axis=1, keepdims=True))
         probabilities = exp_values / np.sum(exp_values, axis=1, keepdims=True)
