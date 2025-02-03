@@ -1,40 +1,62 @@
 import numpy as np
 from ..layers import Layer_Input
 from ..activations import Activation_Softmax
-from ..losses import Loss_CategoricalCrossentropy
+from ..losses import Loss_CategoricalCrossentropy 
+from ..losses.Activation_Softmax_Loss_CategoricalCrossentropy import Activation_Softmax_Loss_CategoricalCrossentropy
 from tqdm import tqdm
 import time
 import pickle
 import copy
-class Activation_Softmax_Loss_CategoricalCrossentropy():
-    def backward(self, dvalues, y_true):
-
-        # Number of samples
-        samples = len(dvalues)
-
-        # If labels are one-hot encoded,
-        # turn them into discrete values
-        if len(y_true.shape) == 2:
-            y_true = np.argmax(y_true, axis=1)
-
-        # Copy so we can safely modify
-        self.dinputs = dvalues.copy()
-        # Calculate gradient
-        self.dinputs[range(samples), y_true] -= 1
-        # Normalize gradient
-        self.dinputs = self.dinputs / samples
-
-
 
 class Model:
-
-    def __init__(self):
-        # Create a list of network objects
+    xp = np # numpy is the default array module (CPU)
+    
+    def get_array_module():
+        return Model.xp
+    
+    def __init__(self , device = None):
+        Model.xp = np # if Cupy fails or CPU is chosen
+        
+        if device is None:
+            try:
+                import cupy as cp
+                Model.xp = cp
+                self.device = 'gpu'
+                print("Using NVIDIA GPU with CuPy (auto-device-selection)")
+            except ImportError:
+                import numpy as np
+                Model.xp = np
+                self.device = 'cpu'
+                print("CuPy not found, using CPU with NumPy (auto-device-selection)")
+        else:
+            device = device.lower()
+            if device == 'gpu':
+                try:
+                    import cupy as cp
+                    Model.xp = cp
+                    self.device = 'gpu'
+                    print("Using NVIDIA GPU with Cupy (user-specified)")
+                except ImportError:
+                    print("Cupy not found, but GPU device was requested. \
+                          Falling back to CPU with NumPy.")
+                    import numpy as np
+                    Model.xp = np
+                    self.device = 'cpu'
+            elif device == 'cpu':
+                import numpy as np
+                Model.xp = np
+                self.device = 'cpu'
+                print("Using CPU with NumPy (user-specified)")
+            else:
+                raise ValueError(f"Invalid device choice: '{device}'. Choose 'cpu' or 'gpu'.")            
+        
         self.layers = []
         # Activation_Softmax classifier's output object
         self.softmax_classifier_output = None
         self.loss = None 
         self.accuracy = None
+        
+        
     # adding layers
     def add(self, layer):
         self.layers.append(layer)
@@ -50,6 +72,7 @@ class Model:
             self.accuracy = accuracy
 
     def finalize(self):
+        xp = Model.get_array_module()
         # instantiate and set the input layer
         self.input_layer = Layer_Input()
         # Count all the layer objects
@@ -108,6 +131,8 @@ class Model:
         # model train func
     def train(self, X, y, *, epochs=1, batch_size=None,
               verbose=1, validation_data=None):
+        xp = Model.get_array_module()
+        
         # Initialize accuracy
         self.accuracy.init(y)
 
@@ -194,6 +219,8 @@ class Model:
 
     # Evaluates the model using passed-in dataset
     def evaluate(self, X_val, y_val, *, batch_size=None):
+        xp = Model.get_array_module()
+        
         # Default value when batch is None
         validation_steps = 1
         # Calculate number of steps
@@ -241,6 +268,8 @@ class Model:
 
     # Predicts on the samples
     def predict(self, X, *, batch_size=None):
+        xp = Model.get_array_module()
+        
         # Default value batch is None
         prediction_steps = 1
         # Calculate number of steps
@@ -270,6 +299,8 @@ class Model:
 
     # Performs forward pass
     def forward(self, X, training):
+        xp = Model.get_array_module()
+        
         # Call forward method on the input layer
         # this will set the output property that the first layer in "prev" object is expecting
         self.input_layer.forward(X, training)
@@ -284,6 +315,7 @@ class Model:
 
     # performs backward pass
     def backward(self, output, y):
+        xp = Model.get_array_module()
         # If softmax classifier
         if self.softmax_classifier_output is not None:
             # call backward method on the combined activation/loss
