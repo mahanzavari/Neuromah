@@ -1,7 +1,8 @@
 import numpy as np
 from ..core.Activation import Activation 
 
-class Activation_ReLU(Activation):
+# class Activation_ReLU(Activation):
+class Activation_ReLU():
     # def forward(self, inputs , training: bool):
     def forward(self, inputs , training = False):
         self.inputs = inputs

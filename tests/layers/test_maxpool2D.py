@@ -1,6 +1,8 @@
 import unittest
 import numpy as np
-from src.layers import Layer_MaxPooling2D
+from Neuromah.src.layers import Layer_MaxPooling2D
+
+
 class TestLayer_MaxPooling2D(unittest.TestCase):
     def setUp(self):
         # Initialize a 2x2 max pooling layer with stride 2 and 'valid' padding

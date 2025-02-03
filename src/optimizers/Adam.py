@@ -19,7 +19,8 @@ class Optimizer_Adam:
     """
 
     def __init__(self, learning_rate=0.001, decay=0., epsilon=1e-7,
-                 beta_1=0.9, beta_2=0.999):
+                 beta_1=0.9, beta_2=0.999,
+                 xp = np):
         if not (0 <= beta_1 < 1) or not (0 <= beta_2 < 1):
             raise ValueError("beta values must be in the interval [0 , 1)")
         # add warning for unlogical values
@@ -32,6 +33,10 @@ class Optimizer_Adam:
         self.beta_2 = beta_2
         self.momentums = {}
         self.caches = {}
+        if xp is not None:
+            self.xp = xp
+        else:
+            raise AttributeError("The Adam Optimizer expects a numpy or cupy object")
 
     def pre_update_params(self):
         """
@@ -68,14 +73,14 @@ class Optimizer_Adam:
             #     raise ValueError("Gradients contain NaN/inf values.")
 
             param, gradient = param_values
-            if not isinstance(param, np.ndarray) or not isinstance(gradient, np.ndarray):
+            if not isinstance(param, self.xp.ndarray) or not isinstance(gradient, self.xp.ndarray):
                 raise ValueError("The parameters and gradients must be numpy arrays")
             if param.shape != gradient.shape:
                 raise ValueError("The parameter and gradient must have the same shape")
 
             if param_name not in self.momentums:
-                self.momentums[param_name] = np.zeros_like(param)
-                self.caches[param_name] = np.zeros_like(param)
+                self.momentums[param_name] = self.xp.zeros_like(param)
+                self.caches[param_name] = self.xp.zeros_like(param)
 
             # Update momentums and caches
             self.momentums[param_name] = (
@@ -91,7 +96,7 @@ class Optimizer_Adam:
 
             # Update parameters
             param -= (
-                self.current_learning_rate * m_hat / (np.sqrt(v_hat) + self.epsilon)
+                self.current_learning_rate * m_hat / (self.xp.sqrt(v_hat) + self.epsilon)
             )
             
 

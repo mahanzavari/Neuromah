@@ -1,9 +1,6 @@
 import numpy as np
 
 from ..layers import Layer_Input
-from ..activations import Activation_Softmax
-from ..losses import Loss_CategoricalCrossentropy 
-from ..losses.Activation_Softmax_Loss_CategoricalCrossentropy import Activation_Softmax_Loss_CategoricalCrossentropy
 from tqdm import tqdm
 import time
 import pickle
@@ -17,7 +14,7 @@ class Model:
     
     def __init__(self , device = None):
         import numpy as np
-        Model.xp = np# if Cupy fails or CPU is chosen
+        Model.xp = np#if Cupy fails or CPU is chosen
         
         if device is None:
             try:
@@ -62,6 +59,7 @@ class Model:
     # adding layers
     def add(self, layer):
         layer.xp = Model.xp
+        # print(layer)
         self.layers.append(layer)
 
     # Set loss, optimizer and accuracy
@@ -69,10 +67,17 @@ class Model:
     def set(self, *, loss=None, optimizer=None, accuracy=None):
         if loss is not None:
             self.loss = loss
+        else:
+            raise ValueError("A loss object needs to be passed to the set contructor")
+
         if optimizer is not None:
             self.optimizer = optimizer
+        else:
+            raise ValueError("An optimizer object needs to be passed to the set contructor")
         if accuracy is not None:
             self.accuracy = accuracy
+        else:
+            raise ValueError("A metrics object needs to be passed to the set contructor")
 
     def finalize(self , xp = np):
 
@@ -126,6 +131,10 @@ class Model:
         # loss function is Categorical Cross-Entropy
         # use Activation_Softmax_Loss_CategoricalCrossentropy for
         # faster gradient calculation
+        from ..losses.Activation_Softmax_Loss_CategoricalCrossentropy import Activation_Softmax_Loss_CategoricalCrossentropy
+        from ..activations import Activation_Softmax
+        from ..losses import Loss_CategoricalCrossentropy 
+
         if isinstance(self.layers[-1], Activation_Softmax) and \
            isinstance(self.loss, Loss_CategoricalCrossentropy):
             self.softmax_classifier_output = \
@@ -298,7 +307,7 @@ class Model:
             # Append batch prediction to the output list
             output.append(batch_output)
         # Stack and return results
-        return np.vstack(output)
+        return xp.vstack(output)
 
     # Performs forward pass
     def forward(self, X, training):

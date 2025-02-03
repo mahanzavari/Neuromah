@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Union, Tuple
+from typing import Union, Tuple , Dict
 """For activation-aware initialization (e.g., He init), automatically detect activation type:
 
 python
@@ -74,7 +74,8 @@ class Layer_Conv2D:
                  bias_initializer=None,
                  activation=None,
                  stride: Union[int, Tuple[int, int]] = 1,
-                 padding: str = 'valid'):
+                 padding: str = 'valid',
+                 xp = np):
         # Parameter validation
         if not isinstance(in_channels, int) or in_channels <= 0:
             raise ValueError("in_channels must be a positive integer")
@@ -86,7 +87,7 @@ class Layer_Conv2D:
             self.kernel_size = kernel_size
         else:
             raise ValueError("kernel_size must be int or tuple of two ints")
-
+        self.xp = xp
         if isinstance(stride, int):
             self.stride = (stride, stride)
         elif isinstance(stride, tuple) and len(stride) == 2:
@@ -100,11 +101,11 @@ class Layer_Conv2D:
 
         # Initialize parameters
         if weight_initializer is None:
-            self.weights = np.random.randn(out_channels, in_channels, *self.kernel_size) * 0.01
+            self.weights = self.xp.random.randn(out_channels, in_channels, *self.kernel_size) * 0.01
         else:
             self.weights = weight_initializer.initialize((out_channels, in_channels, *self.kernel_size))
         if bias_initializer is None:
-            self.biases = np.zeros((out_channels, 1))
+            self.biases = self.xp.zeros((out_channels, 1))
         else:
             self.biases = bias_initializer.initialize((out_channels, 1))
 
@@ -112,26 +113,30 @@ class Layer_Conv2D:
         self.col_input = None
         self.col_weights = None
 
-        self.weight_momentums = np.zeros_like(self.weights)
-        self.bias_momentums = np.zeros_like(self.biases)
+        self.weight_momentums = self.xp.zeros_like(self.weights)
+        self.bias_momentums = self.xp.zeros_like(self.biases)
+        
+        self.activation = activation
 
     def forward(self, inputs: np.ndarray, training: bool) -> None:
-        self.inputs = inputs
+        self.inputs = inputs  # original inputs
+        # print(self.xp , 'mahan')
         batch_size, in_channels, in_h, in_w = inputs.shape
 
         # Calculate output dimensions
         out_h, out_w, pad_h, pad_w = self._calculate_output_shape(in_h, in_w)
 
-        # Apply padding
+        # Apply padding if needed and store it
         if self.padding == 'same':
-            inputs_padded = np.pad(inputs,
-                                   ((0, 0), (0, 0), (pad_h[0], pad_h[1]), (pad_w[0], pad_w[1])),
-                                   mode='constant')
+            self.inputs_padded = self.xp.pad(inputs,
+                                        ((0, 0), (0, 0), (pad_h[0], pad_h[1]), (pad_w[0], pad_w[1])),
+                                        mode='constant')
+            inputs_to_use = self.inputs_padded
         else:
-            inputs_padded = inputs
+            inputs_to_use = inputs
 
-        # im2col transformation
-        self.col_input = self._im2col(inputs_padded, self.kernel_size, self.stride)
+        # im2col transformation on padded inputs
+        self.col_input = self._im2col(inputs_to_use, self.kernel_size, self.stride)
         col_weights = self.weights.reshape(self.weights.shape[0], -1).T
 
         # Matrix multiplication
@@ -141,6 +146,7 @@ class Layer_Conv2D:
             self.activation.forward(self.output)
             self.output = self.activation.output
 
+
     def backward(self, dvalues: np.ndarray) -> None:
         if self.activation:
             self.activation.backward(dvalues)
@@ -148,18 +154,29 @@ class Layer_Conv2D:
 
         # Reshape dvalues to match the column matrix format
         batch_size, out_channels, out_h, out_w = dvalues.shape
-        dvalues = dvalues.transpose(0, 2, 3, 1).reshape(-1, out_channels)
+        dvalues_reshaped = dvalues.transpose(0, 2, 3, 1).reshape(-1, out_channels)
 
         # Compute gradients of weights
-        dweights = self.col_input.T @ dvalues
+        dweights = self.col_input.T @ dvalues_reshaped
         dweights = dweights.T.reshape(self.weights.shape)
 
         # Compute gradients of biases
-        dbiases = np.sum(dvalues, axis=0, keepdims=True).T
+        dbiases = self.xp.sum(dvalues_reshaped, axis=0, keepdims=True).T
 
         # Compute gradients of inputs
-        dinputs = dvalues @ self.weights.reshape(self.weights.shape[0], -1)
-        dinputs = self._col2im(dinputs, self.inputs.shape, self.kernel_size, self.stride)
+        dinputs_col = dvalues_reshaped @ self.weights.reshape(self.weights.shape[0], -1)
+
+        # Use the padded shape in _col2im if padding was applied
+        if self.padding == 'same':
+            padded_shape = self.inputs_padded.shape
+            dinputs_padded = self._col2im(dinputs_col, padded_shape, self.kernel_size, self.stride)
+            # Remove the padding to recover gradients corresponding to the original input
+            pad_h, pad_w = self._calculate_padding(self.inputs.shape[2], self.inputs.shape[3])
+            dinputs = dinputs_padded[:, :,
+                                       pad_h[0]: dinputs_padded.shape[2] - pad_h[1],
+                                       pad_w[0]: dinputs_padded.shape[3] - pad_w[1]]
+        else:
+            dinputs = self._col2im(dinputs_col, self.inputs.shape, self.kernel_size, self.stride)
 
         # Store gradients
         self.weight_gradients = dweights
@@ -175,52 +192,57 @@ class Layer_Conv2D:
         out_h = (in_h - kernel_h) // stride_h + 1
         out_w = (in_w - kernel_w) // stride_w + 1
 
-        # Initialize the output matrix
-        col_matrix = np.zeros((batch_size, out_h, out_w, in_channels, kernel_h, kernel_w))
+        # Use stride tricks to create a view of the input as sliding windows
+        shape = (batch_size, in_channels, out_h, out_w, kernel_h, kernel_w)
+        strides = (inputs.strides[0], inputs.strides[1], 
+                   inputs.strides[2] * stride_h, inputs.strides[3] * stride_w,
+                   inputs.strides[2], inputs.strides[3])
 
-        # Fill the output matrix
-        for i in range(out_h):
-            for j in range(out_w):
-                col_matrix[:, i, j, :, :, :] = inputs[
-                    :,
-                    :,
-                    i * stride_h: i * stride_h + kernel_h,
-                    j * stride_w: j * stride_w + kernel_w,
-                ]
+        strided = self.xp.lib.stride_tricks.as_strided(
+            inputs, shape=shape, strides=strides, writeable=False
+        )
 
         # Reshape to (batch_size * out_h * out_w, in_channels * kernel_h * kernel_w)
-        col_matrix = col_matrix.transpose(0, 1, 2, 4, 5, 3).reshape(batch_size * out_h * out_w, -1)
-
+        col_matrix = strided.transpose(0, 2, 3, 1, 4, 5).reshape(batch_size * out_h * out_w, -1)
         return col_matrix
 
-    def _col2im(self, col_matrix: np.ndarray, input_shape: Tuple[int, int, int, int], kernel_size: Tuple[int, int], stride: Tuple[int, int]) -> np.ndarray:
+    def _col2im(self, col_matrix: np.ndarray, input_shape: Tuple[int, int, int, int], 
+                kernel_size: Tuple[int, int], stride: Tuple[int, int]) -> np.ndarray:
         batch_size, in_channels, in_h, in_w = input_shape
         kernel_h, kernel_w = kernel_size
         stride_h, stride_w = stride
 
-        # Calculate output dimensions
+        # Calculate output dimensions used in original im2col
         out_h = (in_h - kernel_h) // stride_h + 1
         out_w = (in_w - kernel_w) // stride_w + 1
 
-        # Reshape the column matrix back to (batch_size, out_h, out_w, in_channels, kernel_h, kernel_w)
-        col_matrix = col_matrix.reshape(batch_size, out_h, out_w, kernel_h, kernel_w, in_channels)
-        col_matrix = col_matrix.transpose(0, 1, 2, 5, 3, 4)
+        # Reshape column matrix to (batch, out_h, out_w, in_channels, kernel_h, kernel_w)
+        col_reshaped = col_matrix.reshape(batch_size, out_h, out_w, in_channels, kernel_h, kernel_w)
+        col_reshaped = col_reshaped.transpose(0, 3, 1, 2, 4, 5)  # (batch, channels, out_h, out_w, kh, kw)
 
-        # Initialize the output tensor
-        output = np.zeros((batch_size, in_channels, in_h, in_w))
+        # Initialize output tensor
+        output = self.xp.zeros((batch_size, in_channels, in_h, in_w), dtype=col_matrix.dtype)
 
-        # Fill the output tensor
-        for i in range(out_h):
-            for j in range(out_w):
-                output[
-                    :,
-                    :,
-                    i * stride_h: i * stride_h + kernel_h,
-                    j * stride_w: j * stride_w + kernel_w,
-                ] += col_matrix[:, i, j, :, :, :]
+        # Calculate all window positions at once using vectorized operations
+        h_idx = (self.xp.arange(out_h) * stride_h).reshape(-1, 1, 1, 1)
+        w_idx = (self.xp.arange(out_w) * stride_w).reshape(1, -1, 1, 1)
+        h_filter = self.xp.arange(kernel_h).reshape(1, 1, -1, 1)
+        w_filter = self.xp.arange(kernel_w).reshape(1, 1, 1, -1)
+        
+        # Calculate target indices for all positions simultaneously
+        h_target = h_idx + h_filter  # (out_h, 1, kh, 1)
+        w_target = w_idx + w_filter  # (1, out_w, 1, kw)
+
+        # Vectorized scattering using numpy.add.at
+        for b in range(batch_size):
+            for c in range(in_channels):
+                self.xp.add.at(
+                    output[b, c],
+                    (h_target.ravel(), w_target.ravel()),
+                    col_reshaped[b, c].ravel()
+                )
 
         return output
-
     def _calculate_output_shape(self, in_h: int, in_w: int) -> Tuple[int, int, Tuple[int, int], Tuple[int, int]]:
         if self.padding == 'same':
             pad_h = self._calculate_padding(in_h, in_w)[0]
@@ -246,8 +268,11 @@ class Layer_Conv2D:
             return pad_h, pad_w
         return (0, 0), (0, 0)
 
-    def get_parameters(self) -> Tuple[np.ndarray, np.ndarray]:
-        return self.weights, self.biases
+    def get_parameters(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
+        return {
+            "weights": (self.weights, self.weight_gradients),
+            "biases": (self.biases, self.bias_gradients)
+        }
 
     def set_parameters(self, weights: np.ndarray, biases: np.ndarray) -> None:
         self.weights = weights

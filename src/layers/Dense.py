@@ -1,6 +1,6 @@
-import numpy as np # keep it for Type-hints
-
+import numpy as np # typehint
 from typing import Dict, Tuple, Optional
+
 class Layer_Dense:
     """
 A class representing a Dense (fully connected) layer in a neural network.
@@ -19,6 +19,7 @@ Parameters
         The L1 regularization coefficient for the weights. Defaults to 0.
     weight_regularizer_l2 : float
         The L2 regularization coefficient for the weights. Defaults to 0."""
+        
         
     def __init__(self, n_inputs: int, n_neurons: int, 
                  initializer: Optional[object] = None,
@@ -55,7 +56,7 @@ Parameters
         inputs (np.ndarray): Input data of shape (batch_size, n_inputs).
         training (bool): Whether the layer is in training mode. Affects activation behavior (e.g., dropout).
         """
-        if not isinstance(inputs , np.ndarray):
+        if not isinstance(inputs , self.xp.ndarray):
             raise TypeError("inputs must be a numpy array")
         if inputs.shape[1] != self.weights.shape[0]:
             raise ValueError(f"Input features mismatch. Expected {self.weights.shape[0]}, got {inputs.shape[1]}")
