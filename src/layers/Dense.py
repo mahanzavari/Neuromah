@@ -1,7 +1,6 @@
 import numpy as np # keep it for Type-hints
 
 from typing import Dict, Tuple, Optional
-from ..core.Model import Model
 class Layer_Dense:
     """
 A class representing a Dense (fully connected) layer in a neural network.
@@ -25,9 +24,10 @@ Parameters
                  initializer: Optional[object] = None,
                  activation: Optional[object] = None,
                  weight_regularizer_l1: float = 0, 
-                 weight_regularizer_l2: float = 0) -> None:
-        xp = Model.get_array_module() 
-        
+                 weight_regularizer_l2: float = 0,
+                 xp = np) -> None:
+        # xp = Model.get_array_module()
+        self.xp = xp 
         # Validate inputs
         if not isinstance(n_inputs, int) or n_inputs <= 0:
             raise ValueError("n_inputs must be a positive integer")
@@ -47,7 +47,7 @@ Parameters
 
     # def forward(self, inputs: np.ndarray, training: bool) -> None:
     def forward(self, inputs: np.ndarray , training : bool) -> None:
-        xp = Model.get_array_module()
+        # xp = self.weights.dtype.type
         """
     Compute the forward pass of the layer.
     
@@ -62,7 +62,7 @@ Parameters
         if np.any(np.isnan(inputs)) or np.any(np.isinf(inputs)):
             raise ValueError("Input contains NaN/Inf values")
         self.inputs = inputs
-        self.output = xp.dot(inputs, self.weights) + self.biases
+        self.output = self.xp.dot(inputs, self.weights) + self.biases
 
         # Forward pass through activation
         if self.activation is not None:
@@ -70,7 +70,8 @@ Parameters
             self.output = self.activation.output 
 
     def backward(self, dvalues: np.ndarray) -> None:
-        xp = Model.get_array_module()
+        # xp = self.weights.dtypes.type
+        # xp = Model.get_array_module()
         # Backward pass through activation first 
         if self.activation is not None:
             self.activation.backward(dvalues)
@@ -78,18 +79,18 @@ Parameters
 
         # Gradients on parameters
         batch_size = dvalues.shape[0]
-        self.dweights = xp.dot(self.inputs.T, dvalues) / batch_size  # Normalized
-        self.dbiases = xp.sum(dvalues, axis=0, keepdims=True) / batch_size
+        self.dweights = self.xp.dot(self.inputs.T, dvalues) / batch_size  # Normalized
+        self.dbiases = self.xp.sum(dvalues, axis=0, keepdims=True) / batch_size
 
         # L1/L2 regularization for weights (biases excluded : line 26)
         if self.weight_regularizer_l1 > 0:
-            dL1 = xp.sign(self.weights)
+            dL1 = self.xp.sign(self.weights)
             self.dweights += self.weight_regularizer_l1 * dL1
         if self.weight_regularizer_l2 > 0:
             self.dweights += 2 * self.weight_regularizer_l2 * self.weights
 
         # Gradient on inputs
-        self.dinputs = xp.dot(dvalues, self.weights.T)
+        self.dinputs = self.xp.dot(dvalues, self.weights.T)
 
     def get_parameters(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
         return {

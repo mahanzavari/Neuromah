@@ -1,4 +1,5 @@
 import numpy as np
+
 from ..layers import Layer_Input
 from ..activations import Activation_Softmax
 from ..losses import Loss_CategoricalCrossentropy 
@@ -11,11 +12,12 @@ import copy
 class Model:
     xp = np # numpy is the default array module (CPU)
     
-    def get_array_module():
-        return Model.xp
+    # def get_array_module():
+    #     return Model.xp
     
     def __init__(self , device = None):
-        Model.xp = np # if Cupy fails or CPU is chosen
+        import numpy as np
+        Model.xp = np# if Cupy fails or CPU is chosen
         
         if device is None:
             try:
@@ -37,7 +39,7 @@ class Model:
                     self.device = 'gpu'
                     print("Using NVIDIA GPU with Cupy (user-specified)")
                 except ImportError:
-                    print("Cupy not found, but GPU device was requested. \
+                    print("Cupy not found, but GPU device was requested.\n \
                           Falling back to CPU with NumPy.")
                     import numpy as np
                     Model.xp = np
@@ -59,6 +61,7 @@ class Model:
         
     # adding layers
     def add(self, layer):
+        layer.xp = Model.xp
         self.layers.append(layer)
 
     # Set loss, optimizer and accuracy
@@ -71,8 +74,8 @@ class Model:
         if accuracy is not None:
             self.accuracy = accuracy
 
-    def finalize(self):
-        xp = Model.get_array_module()
+    def finalize(self , xp = np):
+
         # instantiate and set the input layer
         self.input_layer = Layer_Input()
         # Count all the layer objects
@@ -130,8 +133,8 @@ class Model:
     # model train func
         # model train func
     def train(self, X, y, *, epochs=1, batch_size=None,
-              verbose=1, validation_data=None):
-        xp = Model.get_array_module()
+              verbose=1, validation_data=None , xp = np):
+        # xp = Model.get_array_module()
         
         # Initialize accuracy
         self.accuracy.init(y)
@@ -219,7 +222,7 @@ class Model:
 
     # Evaluates the model using passed-in dataset
     def evaluate(self, X_val, y_val, *, batch_size=None):
-        xp = Model.get_array_module()
+        xp = Model.xp
         
         # Default value when batch is None
         validation_steps = 1
@@ -268,7 +271,7 @@ class Model:
 
     # Predicts on the samples
     def predict(self, X, *, batch_size=None):
-        xp = Model.get_array_module()
+        xp = Model.xp
         
         # Default value batch is None
         prediction_steps = 1
@@ -299,7 +302,7 @@ class Model:
 
     # Performs forward pass
     def forward(self, X, training):
-        xp = Model.get_array_module()
+
         
         # Call forward method on the input layer
         # this will set the output property that the first layer in "prev" object is expecting
@@ -315,7 +318,7 @@ class Model:
 
     # performs backward pass
     def backward(self, output, y):
-        xp = Model.get_array_module()
+        xp = Model.xp
         # If softmax classifier
         if self.softmax_classifier_output is not None:
             # call backward method on the combined activation/loss
