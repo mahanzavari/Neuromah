@@ -1,3 +1,4 @@
+
 import numpy as np
 from typing import Union, Tuple , Dict
 """For activation-aware initialization (e.g., He init), automatically detect activation type:
@@ -13,39 +14,39 @@ if not weight_initializer:
 class Layer_Conv2D:
     # DocString is AI generated , double check is needed
     """2D Convolutional Layer implementing spatial convolution with optional activation.
-     
+
     This layer creates convolution filters that are convolved with the input to produce
     output feature maps. Supports both 'valid' and 'same' padding modes, custom weight
     initialization, and post-convolution activation functions.
- 
+
     Args:
         in_channels (int): Number of input channels/dimensions
         out_channels (int): Number of output channels/filters
-        kernel_size (Union[int, Tuple[int, int]]): Spatial dimensions of the convolution kernel. 
+        kernel_size (Union[int, Tuple[int, int]]): Spatial dimensions of the convolution kernel.
             Can be single integer for square kernels or (height, width) tuple.
-        stride (Union[int, Tuple[int, int]], optional): Stride of the convolution. 
+        stride (Union[int, Tuple[int, int]], optional): Stride of the convolution.
             Default: 1 (single integer or (stride_h, stride_w) tuple).
-        padding (str, optional): Padding mode: 'valid' (no padding) or 'same' 
+        padding (str, optional): Padding mode: 'valid' (no padding) or 'same'
             (auto-padding to maintain input dimensions). Default: 'valid'.
-        activation (Optional[Callable], optional): Activation function to apply 
+        activation (Optional[Callable], optional): Activation function to apply
             after convolution. Should implement `forward()` and `backward()` methods.
             Default: None.
-        weight_initializer (Optional[Callable], optional): Initializer for convolution weights. 
+        weight_initializer (Optional[Callable], optional): Initializer for convolution weights.
             If None, uses He initialization with ReLU correction. Default: None.
         bias_initializer (Optional[Callable], optional): Initializer for bias parameters.
             If None, initializes biases to zeros. Default: None.
 
     Attributes:
-        weights (np.ndarray): Learnable convolution filters of shape 
+        weights (np.ndarray): Learnable convolution filters of shape
             (out_channels, in_channels, kernel_h, kernel_w)
         biases (np.ndarray): Learnable bias terms of shape (out_channels, 1)
         weight_gradients (np.ndarray): Gradient buffer for weights (same shape as weights)
         bias_gradients (np.ndarray): Gradient buffer for biases (same shape as biases)
         dinputs (np.ndarray): Gradient buffer for inputs (same shape as original inputs)
- 
+
     Raises:
         ValueError: If invalid padding mode specified or kernel dimensions are non-positive
- 
+
     Examples:
         >>> # Create convolutional layer with ReLU activation
         >>> conv = Layer_Conv2D(
@@ -60,7 +61,7 @@ class Layer_Conv2D:
         >>> output = conv.forward(input_data)
         >>> # Backward pass
         >>> conv.backward(upstream_gradients)
- 
+
     Note:
         - Input shape: (batch_size, in_channels, height, width) [NCHW format]
         - Output shape: (batch_size, out_channels, out_height, out_width)
@@ -115,7 +116,7 @@ class Layer_Conv2D:
 
         self.weight_momentums = self.xp.zeros_like(self.weights)
         self.bias_momentums = self.xp.zeros_like(self.biases)
-        
+
         self.activation = activation
 
     def forward(self, inputs: np.ndarray, training: bool) -> None:
@@ -194,7 +195,7 @@ class Layer_Conv2D:
 
         # Use stride tricks to create a view of the input as sliding windows
         shape = (batch_size, in_channels, out_h, out_w, kernel_h, kernel_w)
-        strides = (inputs.strides[0], inputs.strides[1], 
+        strides = (inputs.strides[0], inputs.strides[1],
                    inputs.strides[2] * stride_h, inputs.strides[3] * stride_w,
                    inputs.strides[2], inputs.strides[3])
 
@@ -206,43 +207,40 @@ class Layer_Conv2D:
         col_matrix = strided.transpose(0, 2, 3, 1, 4, 5).reshape(batch_size * out_h * out_w, -1)
         return col_matrix
 
-    def _col2im(self, col_matrix: np.ndarray, input_shape: Tuple[int, int, int, int], 
+    def _col2im(self, col_matrix: np.ndarray, input_shape: Tuple[int, int, int, int],
                 kernel_size: Tuple[int, int], stride: Tuple[int, int]) -> np.ndarray:
         batch_size, in_channels, in_h, in_w = input_shape
         kernel_h, kernel_w = kernel_size
         stride_h, stride_w = stride
 
-        # Calculate output dimensions used in original im2col
+        # Calculate output dimensions used in im2col
         out_h = (in_h - kernel_h) // stride_h + 1
         out_w = (in_w - kernel_w) // stride_w + 1
 
-        # Reshape column matrix to (batch, out_h, out_w, in_channels, kernel_h, kernel_w)
+        # Reshape the column matrix to (batch, out_h, out_w, in_channels, kernel_h, kernel_w)
         col_reshaped = col_matrix.reshape(batch_size, out_h, out_w, in_channels, kernel_h, kernel_w)
-        col_reshaped = col_reshaped.transpose(0, 3, 1, 2, 4, 5)  # (batch, channels, out_h, out_w, kh, kw)
+        # Permute to (batch, in_channels, out_h, out_w, kernel_h, kernel_w)
+        col_reshaped = col_reshaped.transpose(0, 3, 1, 2, 4, 5)
 
         # Initialize output tensor
         output = self.xp.zeros((batch_size, in_channels, in_h, in_w), dtype=col_matrix.dtype)
 
-        # Calculate all window positions at once using vectorized operations
-        h_idx = (self.xp.arange(out_h) * stride_h).reshape(-1, 1, 1, 1)
-        w_idx = (self.xp.arange(out_w) * stride_w).reshape(1, -1, 1, 1)
-        h_filter = self.xp.arange(kernel_h).reshape(1, 1, -1, 1)
-        w_filter = self.xp.arange(kernel_w).reshape(1, 1, 1, -1)
-        
-        # Calculate target indices for all positions simultaneously
-        h_target = h_idx + h_filter  # (out_h, 1, kh, 1)
-        w_target = w_idx + w_filter  # (1, out_w, 1, kw)
-
-        # Vectorized scattering using numpy.add.at
+        # Iterate through output spatial dimensions
         for b in range(batch_size):
             for c in range(in_channels):
-                self.xp.add.at(
-                    output[b, c],
-                    (h_target.ravel(), w_target.ravel()),
-                    col_reshaped[b, c].ravel()
-                )
+                for oh in range(out_h):
+                    for ow in range(out_w):
+                        # Calculate corresponding input indices
+                        h_start = oh * stride_h
+                        w_start = ow * stride_w
+                        # Extract the corresponding kernel values from col_reshaped
+                        kernel_values = col_reshaped[b, c, oh, ow] # (kernel_h, kernel_w)
+                        # Add these kernel values to the correct input locations
+                        output[b, c, h_start:h_start + kernel_h, w_start:w_start + kernel_w] += kernel_values
 
         return output
+
+
     def _calculate_output_shape(self, in_h: int, in_w: int) -> Tuple[int, int, Tuple[int, int], Tuple[int, int]]:
         if self.padding == 'same':
             pad_h = self._calculate_padding(in_h, in_w)[0]
