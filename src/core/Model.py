@@ -59,7 +59,7 @@ class Model:
     # adding layers
     def add(self, layer):
         layer.xp = Model.xp
-        # print(layer)
+        layer.model = self 
         self.layers.append(layer)
 
     # Set loss, optimizer and accuracy

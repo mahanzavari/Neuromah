@@ -1,0 +1,18 @@
+cmake_minimum_required(VERSION 3.10)
+project(Neuromah_Layers)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+set(Python3_ROOT_DIR "C:/Users/ASUS/AppData/Local/Programs/Python/Python312")
+set(PYTHON3_EXECUTABLE "C:/Users/ASUS/AppData/Local/Programs/Python/Python312/python.exe")
+
+# Find pybind11 package (ensure you installed it via pip or system-wide)
+set(pybind11_DIR "C:/Users/ASUS/AppData/Local/Programs/Python/Python312/Lib/site-packages/pybind11/share/cmake/pybind11")
+
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+find_package(pybind11 REQUIRED)
+
+# Add source files
+add_subdirectory(src/layers)
+

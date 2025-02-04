@@ -1,0 +1,2 @@
+# Define the module name
+pybind11_add_module(Conv2D_module Conv2D.cpp)
