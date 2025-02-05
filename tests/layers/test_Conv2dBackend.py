@@ -1,8 +1,7 @@
 import unittest
 import numpy as np
 from Neuromah.src.layers import Layer_Conv2D
-class TestLayerConv2D(unittest.TestCase
-                      ):
+class TestLayerConv2D(unittest.TestCase):
     
     def test_forward_valid_padding(self):
         layer =  Layer_Conv2D(in_channels=3, out_channels=2, kernel_size=3, padding='valid')
