@@ -72,6 +72,6 @@ py::array_t<float> conv2d(py::array_t<float> input, py::array_t<float> kernel) {
 }
 
 // Pybind11 module definition
-PYBIND11_MODULE(conv2d_cpp, m) {
-    m.def("conv2d", &conv2d, "2D Convolution (C++ implementation)");
+PYBIND11_MODULE(_Conv2DBackend_cpp, m) {  
+    m.def("conv2d_cpu", &conv2d, "2D Convolution (C++ implementation)"); 
 }

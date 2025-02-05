@@ -1,7 +1,6 @@
 import numpy as np
 from typing import Union, Tuple , Dict
-import Conv2D_Backend_compiled  # comopiled cpp 
-
+from . import _Conv2DBackend_cpp
 """For activation-aware initialization (e.g., He init), automatically detect activation type:
 
 python
@@ -70,7 +69,6 @@ class Layer_Conv2D:
         - Weight initialization automatically adapts to activation function when using
           default initializer (He initialization for ReLU-family, Glorot otherwise)
     """
-
     def __init__(self, in_channels: int, out_channels: int,
                  kernel_size: Union[int, Tuple[int, int]],
                  weight_initializer=None,
@@ -91,12 +89,16 @@ class Layer_Conv2D:
             raise ValueError("kernel_size must be int or tuple of two ints")
         self.xp = xp
         if isinstance(stride, int):
+            if stride <= 0: 
+                raise ValueError("stride must be positive integer or tuple of positive integers")
             self.stride = (stride, stride)
         elif isinstance(stride, tuple) and len(stride) == 2:
+            if not all(s > 0 for s in stride): 
+                raise ValueError("stride must be positive integer or tuple of positive integers")
             self.stride = stride
         else:
             raise ValueError("stride must be int or tuple of two ints")
-
+        
         if padding not in ['valid', 'same']:
             raise ValueError("padding must be 'valid' or 'same'")
         self.padding = padding
@@ -139,21 +141,24 @@ class Layer_Conv2D:
             device = self.model.device # Access device from the model instance
         except AttributeError:
             pass # Fallback to 'cpu' if model or device attribute is not found
+        
+        input_np = inputs_to_use
+        kernel_np = self.weights
+        if self.xp != np:
+            input_np = self.xp.asnumpy(inputs_to_use) # Convert to NumPy array for C++ backend
+            kernel_np = self.xp.asnumpy(self.weights)   # Convert kernel to NumPy array
 
-        input_np = self.xp.asnumpy(inputs_to_use) # Convert to NumPy array for C++ backend
-        kernel_np = self.xp.asnumpy(self.weights)   # Convert kernel to NumPy array
-
-        if device == 'gpu':
-            try:
-                output_np = Conv2DBackend.conv2d_gpu(input_np, kernel_np) # Call GPU version
-            except AttributeError as e: # Handle case where conv2d_gpu is not available (e.g., compiled without SYCL)
-                print(f"Warning: GPU convolution requested but not available ({e}). Falling back to CPU.")
-                output_np = Conv2DBackend.conv2d_cpu(input_np, kernel_np) # Fallback to CPU
-            except Exception as e: # Handle other potential errors during GPU execution
-                print(f"Error during GPU convolution ({e}). Falling back to CPU.")
-                output_np = Conv2DBackend.conv2d_cpu(input_np, kernel_np) # Fallback to CPU
-        else: # device == 'cpu' or fallback
-            output_np = Conv2DBackend.conv2d_cpu(input_np, kernel_np) # Call CPU version
+        # if device == 'gpu':
+        #     try:
+        #         output_np =   _Conv2DBackend_cpp.conv2d_gpu(input_np, kernel_np) # Call GPU version
+        #     except AttributeError as e: # Handle case where conv2d_gpu is not available (e.g., compiled without SYCL)
+        #         print(f"Warning: GPU convolution requested but not available ({e}). Falling back to CPU.")
+        #         output_np =   _Conv2DBackend_cpp.conv2d_cpu(input_np, kernel_np) # Fallback to CPU
+        #     except Exception as e: # Handle other potential errors during GPU execution
+        #         print(f"Error during GPU convolution ({e}). Falling back to CPU.")
+        #         output_np =   _Conv2DBackend_cpp.conv2d_cpu(input_np, kernel_np) # Fallback to CPU
+        # else: # device == 'cpu' or fallback
+        output_np =   _Conv2DBackend_cpp.conv2d_cpu(input_np, kernel_np) # Call CPU version
 
         self.output = self.xp.asarray(output_np) # Convert back to the array module (NumPy or CuPy)
 
