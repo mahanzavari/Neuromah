@@ -8,6 +8,7 @@ __pycache__/
 *.pyd  # Add this line
 
 # Distribution / packaging
+vscode/
 .Python
 eigen/
 build/
