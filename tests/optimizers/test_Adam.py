@@ -34,4 +34,3 @@ class test_OptimizerAdam(unittest.TestCase):
           with self.assertRaises(ValueError):
                Optimizer_Adam(beta_1= 0.8 , beta_2= -0.5)
                
-     def test_

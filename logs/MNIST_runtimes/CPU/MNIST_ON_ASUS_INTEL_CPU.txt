@@ -1,0 +1,44 @@
+Logs on my computer, asus laptop Intel CPU, no GPU
+
+
+
+
+2025-02-02 20:53:11.892998: I tensorflow/core/util/port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+oint round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2025-02-02 20:53:12.951500: I tensorflow/core/util/port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+------------------------------
+(60000, 28, 28)
+(60000,)
+(10000, 28, 28)
+(10000,)
+Epoch 1/10: 100%|████████████████████| 1875/1875 [00:17<00:00, 106.01step/s]
+time: 17.69s, acc: 0.922, loss: 1.664 (data_loss: 1.664, reg_loss: 0.000), lr: 0.0010000
+validation, acc: 0.922, loss: 1.540
+Epoch 2/10: 100%|████████████████████| 1875/1875 [00:57<00:00, 32.72step/s]
+time: 57.30s, acc: 0.930, loss: 1.546 (data_loss: 1.546, reg_loss: 0.000), lr: 0.0010000
+validation, acc: 0.933, loss: 1.529
+Epoch 3/10: 100%|████████████████████| 1875/1875 [00:21<00:00, 88.16step/s]
+time: 21.27s, acc: 0.949, loss: 1.532 (data_loss: 1.532, reg_loss: 0.000), lr: 0.0010000
+validation, acc: 0.949, loss: 1.512
+Epoch 4/10: 100%|████████████████████| 1875/1875 [00:22<00:00, 81.82step/s]
+time: 22.92s, acc: 0.953, loss: 1.527 (data_loss: 1.527, reg_loss: 0.000), lr: 0.0010000
+validation, acc: 0.957, loss: 1.504
+Epoch 5/10: 100%|████████████████████| 1875/1875 [00:22<00:00, 84.18step/s]
+time: 22.27s, acc: 0.956, loss: 1.522 (data_loss: 1.522, reg_loss: 0.000), lr: 0.0010000
+validation, acc: 0.957, loss: 1.504
+Epoch 6/10: 100%|████████████████████| 1875/1875 [00:20<00:00, 90.37step/s]
+time: 20.75s, acc: 0.956, loss: 1.521 (data_loss: 1.521, reg_loss: 0.000), lr: 0.0010000
+validation, acc: 0.958, loss: 1.503
+Epoch 7/10: 100%|████████████████████| 1875/1875 [00:20<00:00, 91.12step/s]
+time: 20.58s, acc: 0.958, loss: 1.521 (data_loss: 1.521, reg_loss: 0.000), lr: 0.0010000
+validation, acc: 0.961, loss: 1.500
+Epoch 8/10: 100%|████████████████████| 1875/1875 [00:21<00:00, 88.40step/s]
+time: 21.21s, acc: 0.959, loss: 1.519 (data_loss: 1.519, reg_loss: 0.000), lr: 0.0010000
+validation, acc: 0.960, loss: 1.501
+Epoch 9/10: 100%|████████████████████| 1875/1875 [00:21<00:00, 86.80step/s]
+time: 21.60s, acc: 0.962, loss: 1.518 (data_loss: 1.518, reg_loss: 0.000), lr: 0.0010000
+validation, acc: 0.963, loss: 1.498
+Epoch 10/10: 100%|████████████████████| 1875/1875 [00:20<00:00, 90.10step/s]
+time: 20.81s, acc: 0.960, loss: 1.514 (data_loss: 1.514, reg_loss: 0.000), lr: 0.0010000
+validation, acc: 0.962, loss: 1.499
+total time spent on train method : 256325874400
