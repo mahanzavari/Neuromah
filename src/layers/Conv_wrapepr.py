@@ -1,6 +1,6 @@
 import numpy as np
 from typing import Union, Tuple, Dict
-from . import _Conv2DBackend_cpp
+from .compiled import _Conv2DBackend_cpp
 
 class Layer_Conv2D:
     """2D Convolutional Layer implementing spatial convolution with optional activation.
