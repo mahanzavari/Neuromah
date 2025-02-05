@@ -1,18 +1,35 @@
 cmake_minimum_required(VERSION 3.10)
-project(Neuromah_Layers)
+project(Neuromah)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_PREFIX_PATH "C:/Users/ASUS/AppData/Local/Programs/Python/Python312/Lib/site-packages/pybind11/share/cmake/")
 
-set(Python3_ROOT_DIR "C:/Users/ASUS/AppData/Local/Programs/Python/Python312")
-set(PYTHON3_EXECUTABLE "C:/Users/ASUS/AppData/Local/Programs/Python/Python312/python.exe")
+# Get NumPy include directory
+execute_process(
+    COMMAND python -c "import numpy; print(numpy.get_include())"
+    OUTPUT_VARIABLE NUMPY_INCLUDE_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
 
-# Find pybind11 package (ensure you installed it via pip or system-wide)
-set(pybind11_DIR "C:/Users/ASUS/AppData/Local/Programs/Python/Python312/Lib/site-packages/pybind11/share/cmake/pybind11")
+# Manually include NumPy headers
+include_directories(${NUMPY_INCLUDE_DIR})
 
+# Find Python and pybind11
 find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 find_package(pybind11 REQUIRED)
 
-# Add source files
-add_subdirectory(src/layers)
+# Include directories for Eigen and other headers
+include_directories(src/include)
 
+# Source files
+set(CONV2D_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/layers/Conv2D.cpp)
+set(MAXPOOL_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/layers/maxpooling_backend.cpp)
+
+# Build the modules
+pybind11_add_module(_Conv2DBackend_cpp MODULE ${CONV2D_SOURCES})
+pybind11_add_module(_MaxPooling2DBackend_cpp MODULE ${MAXPOOL_SOURCES})
+
+target_link_libraries(_Conv2DBackend_cpp PRIVATE pybind11::module)
+target_link_libraries(_MaxPooling2DBackend_cpp PRIVATE pybind11::module)
+
+set_target_properties(_Conv2DBackend_cpp PROPERTIES PREFIX "" SUFFIX ".pyd")
+set_target_properties(_MaxPooling2DBackend_cpp PROPERTIES PREFIX "" SUFFIX ".pyd")

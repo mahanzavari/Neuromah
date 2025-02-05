@@ -5,9 +5,11 @@ __pycache__/
 
 # C extensions
 *.so
+*.pyd  # Add this line
 
 # Distribution / packaging
 .Python
+eigen/
 build/
 develop-eggs/
 dist/
@@ -112,7 +114,7 @@ ipython_config.py
 .pdm-build/
 
 # PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
-__pypackages__/
+__pypackages__/ 
 
 # Celery stuff
 celerybeat-schedule

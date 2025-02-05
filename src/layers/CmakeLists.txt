@@ -1,2 +1,14 @@
-# Define the module name
-pybind11_add_module(Conv2D_module Conv2D.cpp)
+cmake_minimum_required(VERSION 3.10)
+project(Conv2D_module) #project name can be anything
+
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+find_package(pybind11 REQUIRED)
+
+include_directories(${PYTHON_INCLUDE_DIRS})
+include_directories(${pybind11_INCLUDE_DIRS})
+
+pybind11_add_module(_Conv2DBackend_cpp MODULE Conv2D.cpp) 
+
+target_link_libraries(_Conv2DBackend_cpp pybind11::module) #Link pybind
+
+set_target_properties(_Conv2DBackend_cpp PROPERTIES PREFIX "" SUFFIX ".pyd")
