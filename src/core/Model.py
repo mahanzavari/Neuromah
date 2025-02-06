@@ -5,6 +5,7 @@ from tqdm import tqdm
 import time
 import pickle
 import copy
+from ..utils import TensorMonitor
 
 class Model:
     xp = np # numpy is the default array module (CPU)
@@ -64,7 +65,7 @@ class Model:
 
     # Set loss, optimizer and accuracy
     # * specifies that all following arguments must be a keyword arguments
-    def set(self, *, loss=None, optimizer=None, accuracy=None):
+    def set(self, *, loss=None, optimizer=None, accuracy=None , tensorMonitor = None):
         if loss is not None:
             self.loss = loss
         else:
@@ -78,7 +79,11 @@ class Model:
             self.accuracy = accuracy
         else:
             raise ValueError("A metrics object needs to be passed to the set contructor")
-
+        if tensorMonitor is not None: # Set tensorMonitor
+            self.tensorMonitor = tensorMonitor
+        else:
+            self.tensorMonitor = None
+        
     def finalize(self , xp = np):
 
         # instantiate and set the input layer
@@ -139,6 +144,8 @@ class Model:
            isinstance(self.loss, Loss_CategoricalCrossentropy):
             self.softmax_classifier_output = \
                 Activation_Softmax_Loss_CategoricalCrossentropy()
+        if self.tensorMonitor:
+            self.tensorMonitor.start_run(self) # pass model info
     # model train func
         # model train func
     def train(self, X, y, *, epochs=1, batch_size=None,
@@ -162,6 +169,9 @@ class Model:
             # Reset loss and accuracy accumulators
             self.loss.new_pass()
             self.accuracy.new_pass()
+
+            if self.tensorMonitor:
+                self.tensorMonitor.start_epoch(epoch)
 
             # Use tqdm for steps within the epoch
             with tqdm(total=train_steps, desc=f'Epoch {epoch}/{epochs}', 
@@ -190,6 +200,7 @@ class Model:
                     predictions = self.output_layer_activation.predictions(output)
                     accuracy = self.accuracy.calculate(predictions, batch_y)
 
+
                     # Backward pass
                     self.backward(output, batch_y)
 
@@ -199,7 +210,18 @@ class Model:
                         self.optimizer.update_params(layer)
                     self.optimizer.post_update_params()
 
+                    # if self.tensorMonitor:
+                    #     self.tensorMonitor.log_scalar('loss/step_training', loss) # Log loss
+                    #     self.tensorMonitor.log_scalar('accuracy/step_training', accuracy) # Log accuracy
+                    #     for layer in self.trainable_layers: # Log weights and biases histograms
+                    #         params = layer.get_parameters()
+                    #         for name, (param, grad) in params.items():
+                    #             self.tensorMonitor.log_histogram(f'{layer.__class__.__name__}/{name}', param)
+                    #     self.tensorMonitor.end_step()
+
                     # Update step progress bar
+                    
+                    
                     pbar_steps.update(1)
 
             # Calculate epoch time
@@ -215,6 +237,24 @@ class Model:
             predictions = self.output_layer_activation.predictions(output)
             epoch_accuracy = self.accuracy.calculate(predictions, y)
 
+# After finishing all batches and computing epoch_loss and epoch_accuracy...
+            if self.tensorMonitor:
+                # Log epoch-level scalar metrics
+                self.tensorMonitor.log_scalar('loss/epoch_training', epoch_loss) 
+                self.tensorMonitor.log_scalar('accuracy/epoch_training', epoch_accuracy)
+                
+                # --- Add logging of weights and biases histograms for each trainable layer ---
+                for layer in self.trainable_layers:
+                    # Ensure the layer has a 'weights' attribute
+                    if hasattr(layer, 'weights'):
+                        self.tensorMonitor.log_layer_parameters(layer)                    # Log biases if they exist
+                    # if hasattr(layer, 'biases'):
+                    #     self.tensorMonitor.log_histogram(f'{layer.__class__.__name__}/biases', layer.biases)
+                
+                # End the epoch logging
+            if self.tensorMonitor:
+                self.tensorMonitor.end_epoch()
+
             # Print epoch summary
             print(
                 #   f'Epoch {epoch}/{epochs}, '
@@ -228,6 +268,10 @@ class Model:
             # Validation (if validation data is provided)
             if validation_data is not None:
                 self.evaluate(*validation_data, batch_size=batch_size)            
+            
+
+        if self.tensorMonitor: 
+            self.tensorMonitor.save_logs()
 
     # Evaluates the model using passed-in dataset
     def evaluate(self, X_val, y_val, *, batch_size=None):

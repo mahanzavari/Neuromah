@@ -2,6 +2,7 @@ import numpy as np
 from typing import Union, Tuple, Dict ,  Optional
 from .compiled import _Conv2DBackend_cpp
 from ..initializers import Initializer
+from ..initializers.Initializer import XavierInitializer , HeInitializer , RandomNormalInitializer 
 class Layer_Conv2D:
     
     def __init__(self, in_channels: int, out_channels: int,
@@ -40,12 +41,12 @@ class Layer_Conv2D:
 
         # Initialize parameters
         if weight_initializer is None:
-            self.weight_initializer = Initializer.RandomNormalInitializer(xp = self.xp)  # Default
+            self.weight_initializer = RandomNormalInitializer(xp = self.xp)  # Default
         elif isinstance(weight_initializer, str):
             if weight_initializer.lower() == "xavier":
-                self.weight_initializer = Initializer.XavierInitializer(xp = self.xp)
+                self.weight_initializer = XavierInitializer(xp = self.xp)
             elif weight_initializer.lower() == "he":
-                self.weight_initializer = Initializer.HeInitializer(xp = self.xp)
+                self.weight_initializer = HeInitializer(xp = self.xp)
             else:
                 raise ValueError(f"Unknown initializer: {weight_initializer} \n implemented initializers are 'xavier' and 'he' ")
         elif isinstance(weight_initializer, Initializer):
@@ -54,9 +55,12 @@ class Layer_Conv2D:
             raise TypeError("weight_initializer must be a string or an Initializer instance.")
         
         # if bias_initializer is None:
-        #     self.biases = self.xp.zeros((out_channels, 1))
+        self.biases = self.xp.zeros((out_channels, 1))
         # else:
         #     self.biases = bias_initializer.initialize((out_channels, 1))
+        
+        self.weights = self.weight_initializer.initialize((out_channels, in_channels, *self.kernel_size))
+
 
         self.weight_momentums = self.xp.zeros_like(self.weights)
         self.bias_momentums = self.xp.zeros_like(self.biases)

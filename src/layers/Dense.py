@@ -1,6 +1,8 @@
 import numpy as np # typehint
 from typing import Dict, Tuple, Optional , Union
 from ..initializers import Initializer
+from ..initializers.Initializer import RandomNormalInitializer , XavierInitializer , HeInitializer 
+
 class Layer_Dense:
     """
 A class representing a Dense (fully connected) layer in a neural network.
@@ -36,19 +38,21 @@ Parameters
             raise ValueError("n_neurons must be a positive integer")
         # Initialize weights and biases
         if weight_initializer is None:
-            self.weights = 0.01 * xp.random.randn(n_inputs, n_neurons)
+            self.weight_initializer = RandomNormalInitializer(xp = self.xp)
         elif isinstance(weight_initializer , str):
             if weight_initializer.lower() == 'xavier':
-                self.weight_initializer = Initializer.XavierInitializer(xp=self.xp)
+                self.weight_initializer = XavierInitializer(xp=self.xp)
             elif weight_initializer.lower() == "he":
-                self.weight_initializer = Initializer.HeInitializer(xp = self.xp)
+                self.weight_initializer = HeInitializer(xp = self.xp)
             else:
                 raise ValueError(f"Unknown initializer: {weight_initializer}\n implemented initializers are 'xavier' and 'he' ")
         elif isinstance(weight_initializer , Initializer):
             self.weight_initializer = weight_initializer
         else:
             raise ValueError("weight_initializer must be a string or an Initializer instance.")
+        
         self.weights = self.weight_initializer.initialize((n_inputs, n_neurons))
+        
         self.biases = xp.zeros((1, n_neurons))  # Always zero-initialize biases!!!!
 
         self.activation = activation  

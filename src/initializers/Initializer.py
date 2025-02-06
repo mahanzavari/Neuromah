@@ -1,4 +1,3 @@
-# initializers.py
 import numpy as np
 
 class Initializer:
