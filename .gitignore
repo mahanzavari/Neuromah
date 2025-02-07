@@ -9,6 +9,7 @@ __pycache__/
 
 # Distribution / packaging
 vscode/
+tensor_logs/
 .Python
 eigen/
 build/
