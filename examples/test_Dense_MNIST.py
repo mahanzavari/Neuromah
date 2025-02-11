@@ -5,7 +5,7 @@ from Neuromah.src.losses.categorical_crossentropy import Loss_CategoricalCrossen
 from Neuromah.src.optimizers import Optimizer_Adam
 from Neuromah.src.activations import Activation_Softmax, Activation_ReLU
 from Neuromah.src.metrics.Accuracy_Categorical import Accuracy_Categorical
-from Neuromah.src.
+# from Neuromah.src.
 from Neuromah.src.layers import Layer_Dropout
 print(Accuracy_Categorical)
 import tensorflow as tf

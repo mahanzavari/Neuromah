@@ -7,11 +7,14 @@ __pycache__/
 *.so
 *.pyd  # Add this line
 
+
 # Distribution / packaging
 vscode/
 tensor_logs/
 .Python
 eigen/
+CmakeLists.txt
+oneDNN/
 build/
 develop-eggs/
 dist/

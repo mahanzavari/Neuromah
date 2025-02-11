@@ -1,8 +1,12 @@
 import numpy as np
 from typing import Union, Tuple, Dict ,  Optional
 from .compiled import _Conv2DBackend_cpp
+# from .compiled import _Conv2D_OneDNN
 from ..initializers import Initializer
 from ..initializers.Initializer import XavierInitializer , HeInitializer , RandomNormalInitializer 
+
+oneDNN_optimization_Neuromah = True
+
 class Layer_Conv2D:
     
     def __init__(self, in_channels: int, out_channels: int,
@@ -83,7 +87,10 @@ class Layer_Conv2D:
         kernel_np = self.weights if self.xp == np else self.xp.asnumpy(self.weights)
 
         # Call the C++ backend without extra conversion copies.
-        output_np = _Conv2DBackend_cpp.conv2d_cpu(input_np, kernel_np)
+        if (oneDNN_optimization_Neuromah):
+            output_np = _Conv2DBackend_cpp.conv2d_cpu(input_np, kernel_np)
+        else: output_np = _Conv2D_oneDNN.conv2d_forward_onednn_cpu(input_np, kernel_np)
+        
         self.output = self.xp.asarray(output_np)
 
         if self.activation:

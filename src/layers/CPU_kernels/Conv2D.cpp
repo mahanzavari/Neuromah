@@ -5,7 +5,6 @@
 #include <cstring>
 #include <stdexcept>
 #include <vector>
-
 namespace py = pybind11;
 
 //=== Helper functions ========================================================

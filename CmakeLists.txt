@@ -18,18 +18,28 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 find_package(pybind11 REQUIRED)
 
 # Include directories for Eigen and other headers
-include_directories(src/include)
+include_directories(src/include/Eigen)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/include/oneDNN/include)
+
 
 # Source files
-set(CONV2D_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/layers/Conv2D.cpp)
-set(MAXPOOL_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/layers/maxpooling_backend.cpp)
+set(CONV2D_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/layers/CPU_kernels/Conv2D.cpp)
+set(MAXPOOL_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/layers/CPU_kernels/maxpooling_backend.cpp)
+set(CONV2D_ONEDNN_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/layers/CPU_kernels/Conv2D_OneDNN.cpp) 
+set(MAXPOOL_ONEDNN_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/layers/CPU_kernels/MaxPooling_oneDNN.cpp)
 
 # Build the modules
 pybind11_add_module(_Conv2DBackend_cpp MODULE ${CONV2D_SOURCES})
 pybind11_add_module(_MaxPooling2DBackend_cpp MODULE ${MAXPOOL_SOURCES})
+pybind11_add_module(_Conv2D_oneDNN SHARED ${CONV2D_ONEDNN_SOURCES}) 
+pybind11_add_module(_MaxPooling2DBackend_onednn SHARED ${MAXPOOL_ONEDNN_SOURCES})
 
 target_link_libraries(_Conv2DBackend_cpp PRIVATE pybind11::module)
 target_link_libraries(_MaxPooling2DBackend_cpp PRIVATE pybind11::module)
+target_link_libraries(_Conv2D_oneDNN PRIVATE pybind11::module) 
+target_link_libraries(_MaxPooling2DBackend_onednn PRIVATE pybind11::module)
 
 set_target_properties(_Conv2DBackend_cpp PROPERTIES PREFIX "" SUFFIX ".pyd")
 set_target_properties(_MaxPooling2DBackend_cpp PROPERTIES PREFIX "" SUFFIX ".pyd")
+set_target_properties(_Conv2D_oneDNN PROPERTIES PREFIX "" SUFFIX ".pyd") 
+set_target_properties(_MaxPooling2DBackend_onednn PROPERTIES PREFIX "" SUFFIX ".pyd")
