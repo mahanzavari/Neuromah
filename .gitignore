@@ -13,6 +13,8 @@ tensor_logs/
 .Python
 eigen/
 build/
+Neuromah/src/layers/CPU_kernels
+Neuromah/src/layers/GPU_kernels
 develop-eggs/
 dist/
 downloads/
