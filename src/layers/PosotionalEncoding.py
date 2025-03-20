@@ -56,6 +56,6 @@ class PosotionalEncoding:
           self.dinputs = dvalues
           return self.dinputs
      
-     def get_parameters(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]
+     def get_parameters(self) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
           # NO Trainable params
           return {}

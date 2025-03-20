@@ -7,6 +7,7 @@ from .BatchNormalization2D import Layer_BatchNormalization2D
 from .MaxPooling2D import Layer_MaxPooling2D
 from .LayerNorm import Layer_Normalization
 from .PosotionalEncoding import PosotionalEncoding
+from .PositionWiseFeed_Forward import PositionwiseFeedForward
 # from .AveragePooling2D import Layer_AvgPooling2D
 # from .RNN import Layer_RNN
 # , Layer_LSTM, Layer_GRU
@@ -18,5 +19,9 @@ __all__ = [
     "Layer_Conv2D",
     "Layer_Flatten",
     "Layer_MaxPooling2D",
+    "PosotionalEncoding",
+    "Layer_Normalization",
+    "Layer_BatchNormalization2D",
+    "PositionwiseFeedForward"
     # "Layer_RNN",
 ]
