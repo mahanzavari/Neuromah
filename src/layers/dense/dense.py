@@ -2,7 +2,7 @@ from typing import Dict, Tuple, Optional, Union
 from ...initializers import Initializer
 from ...initializers.Initializer import RandomNormalInitializer, XavierInitializer, HeInitializer
 from ..core.base import BaseLayer
-import cupy as cp
+import cupy as cp # type: ignore
 import numpy as np
 
 class Dense(BaseLayer):
