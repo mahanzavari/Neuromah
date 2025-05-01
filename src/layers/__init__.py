@@ -1,27 +1,22 @@
-from .Conv_wrapepr import Layer_Conv2D  # Now, import Layer_Conv2D from the wrapper
-from .Dense import Layer_Dense
-from .Dropout import Layer_Dropout
-from .Input import Layer_Input
-from .Flatten import Layer_Flatten
-from .BatchNormalization2D import Layer_BatchNormalization2D
-from .MaxPooling2D import Layer_MaxPooling2D
-from .LayerNorm import Layer_Normalization
-from .PosotionalEncoding import PosotionalEncoding
-from .PositionWiseFeed_Forward import PositionwiseFeedForward
-# from .AveragePooling2D import Layer_AvgPooling2D
-# from .RNN import Layer_RNN
-# , Layer_LSTM, Layer_GRU
+from .core import BaseLayer, Input, Flatten
+from .convolutional import Conv2D, ConvWrapper
+from .pooling import Pooling, MaxPooling2D
+from .normalization import LayerNorm, BatchNormalization2D
+from .attention import Attention, PositionWiseFeedForward, PositionalEncoding
+from .regularization import Dropout
 
 __all__ = [
-    "Layer_Dense",
-    "Layer_Dropout",
-    "Layer_Input",
-    "Layer_Conv2D",
-    "Layer_Flatten",
-    "Layer_MaxPooling2D",
-    "PosotionalEncoding",
-    "Layer_Normalization",
-    "Layer_BatchNormalization2D",
-    "PositionwiseFeedForward"
-    # "Layer_RNN",
+    'BaseLayer',
+    'Input',
+    'Flatten',
+    'Conv2D',
+    'ConvWrapper',
+    'Pooling',
+    'MaxPooling2D',
+    'LayerNorm',
+    'BatchNormalization2D',
+    'Attention',
+    'PositionWiseFeedForward',
+    'PositionalEncoding',
+    'Dropout'
 ]
