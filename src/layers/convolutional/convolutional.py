@@ -1,9 +1,9 @@
 from typing import Dict, Tuple, Optional, Union
 from ...initializers import Initializer
 from ...initializers.Initializer import RandomNormalInitializer, XavierInitializer, HeInitializer
-from ..base import BaseLayer
-import cupy as cp
-
+from ..core.base import BaseLayer
+import cupy as cp # type: ignore
+import numpy as np
 class Convolutional(BaseLayer):
     """
     A class representing a 2D Convolutional layer in a neural network.
@@ -45,7 +45,7 @@ class Convolutional(BaseLayer):
         # Import the appropriate implementation
         if use_gpu:
             try:
-                from ...cuda.convolution_cuda import Conv2DCUDA
+                from .cuda.convolution_cuda import Conv2DCUDA
                 self.impl = Conv2DCUDA(
                     input_channels=input_channels,
                     output_channels=output_channels,

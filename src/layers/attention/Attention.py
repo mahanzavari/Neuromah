@@ -41,7 +41,7 @@ class ScaledDotProductAttention:
             attention_logits += (self.mask * -float('inf'))
             # attention_logits += (self.mask * -1e9)
             
-            from ..activations import Activation_Softmax
+            from ...activations import Activation_Softmax
             self.softmax = Activation_Softmax()
             
             original_shape = attention_logits.shape
@@ -98,7 +98,7 @@ class MultiHeadAttention:
         mask (Optional[np.ndarray]): Optional mask for masked attention (for decoder)
     """
     def __init__(self, d_model: int, num_heads: int, mask: Optional[np.ndarray] = None, xp = np):
-        from ..layers.Dense import Layer_Dense
+        from ..dense import Dense
         self.xp = xp
         self.d_model = d_model
         self.num_heads = num_heads
@@ -107,11 +107,11 @@ class MultiHeadAttention:
 
         self.depth = d_model // num_heads
         # Linear Projections for Q, K and V
-        self.wq = Layer_Dense(d_model, d_model, xp = xp)
-        self.wk = Layer_Dense(d_model, d_model, xp = xp)
-        self.wv = Layer_Dense(d_model, d_model, xp = xp)
+        self.wq = Dense(d_model, d_model, xp = xp)
+        self.wk = Dense(d_model, d_model, xp = xp)
+        self.wv = Dense(d_model, d_model, xp = xp)
         # linear projection for output
-        self.dense = Layer_Dense(d_model, d_model, xp = xp)
+        self.dense = Dense(d_model, d_model, xp = xp)
         # Attention
         self.attention = ScaledDotProductAttention(mask = mask, xp = xp)
     

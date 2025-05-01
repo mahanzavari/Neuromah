@@ -1,5 +1,5 @@
 import numpy as np
-from .compiled import _MaxPooling2DBackend_cpp
+from ..compiled import _MaxPooling2DBackend_cpp
 
 class Layer_MaxPooling2D:
     def __init__(self, pool_size, strides=None, padding='valid'):

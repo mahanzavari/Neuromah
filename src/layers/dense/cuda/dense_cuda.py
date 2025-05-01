@@ -1,8 +1,8 @@
 import numpy as np
 import cupy as cp
 from typing import Optional, Union
-from ..initializers import Initializer
-from ..initializers.Initializer import RandomNormalInitializer, XavierInitializer, HeInitializer
+from ....initializers import Initializer
+from ....initializers.Initializer import RandomNormalInitializer, XavierInitializer, HeInitializer
 
 class DenseCUDA:
     def __init__(self, n_inputs: int, n_neurons: int,
