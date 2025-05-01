@@ -1,6 +1,6 @@
 from typing import Dict, Tuple, Literal, Optional
 from ..core.base import BaseLayer
-import cupy as cp
+import cupy as cp # type: ignore
 import numpy as np
 
 class Pooling(BaseLayer):

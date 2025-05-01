@@ -1,5 +1,5 @@
 import numpy as np
-import cupy as cp
+import cupy as cp # type: ignore
 from typing import Optional, Union
 from ....initializers import Initializer
 from ....initializers.Initializer import RandomNormalInitializer, XavierInitializer, HeInitializer

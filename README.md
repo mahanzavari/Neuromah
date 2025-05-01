@@ -301,3 +301,104 @@ Please include a clear description of your changes and any relevant issue number
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+# Neuromah High-Level API
+
+A high-level API for building and training neural networks, inspired by PyTorch and TensorFlow.
+
+## Installation
+
+```bash
+pip install neuromah
+```
+
+## Quick Start
+
+Here's a simple example of how to use the high-level API to train a neural network:
+
+```python
+import numpy as np
+from src.api import Model, DataLoader, Preprocessor
+from src.api.callbacks import EarlyStopping, ModelCheckpoint
+from src.layers import Dense, Dropout
+from src.activations import ReLU, Softmax
+from src.optimizers import Adam
+from src.losses import CategoricalCrossEntropy
+from src.metrics import Accuracy
+
+# Create model
+model = Model()
+
+# Add layers
+model.add(Dense(64, input_shape=(n_features,)))
+model.add(ReLU())
+model.add(Dropout(0.2))
+model.add(Dense(32))
+model.add(ReLU())
+model.add(Dropout(0.2))
+model.add(Dense(n_classes))
+model.add(Softmax())
+
+# Compile model
+model.compile(
+    optimizer=Adam(learning_rate=0.001),
+    loss=CategoricalCrossEntropy(),
+    metrics=[Accuracy()]
+)
+
+# Train model
+history = model.fit(
+    train_loader,
+    epochs=100,
+    validation_data=val_loader,
+    callbacks=[EarlyStopping(patience=5)]
+)
+```
+
+## Features
+
+### Model
+
+The `Model` class provides a high-level interface for building and training neural networks:
+
+- Layer management with `add()`
+- Model compilation with `compile()`
+- Training with `fit()`
+- Evaluation with `evaluate()`
+- Prediction with `predict()`
+- Model saving and loading with `save()` and `load()`
+
+### Data Handling
+
+The data module provides utilities for loading and preprocessing data:
+
+- `Dataset`: Abstract base class for datasets
+- `ArrayDataset`: Dataset for numpy arrays
+- `DataLoader`: Data loader for batching and shuffling
+- `Preprocessor`: Utilities for data preprocessing
+
+### Callbacks
+
+Callbacks provide hooks for customizing the training process:
+
+- `Callback`: Base class for all callbacks
+- `CallbackList`: Container for multiple callbacks
+- `TensorBoard`: Logging to TensorBoard
+- `EarlyStopping`: Stop training when a metric stops improving
+- `ModelCheckpoint`: Save the model after each epoch
+- `ReduceLROnPlateau`: Reduce learning rate when a metric plateaus
+
+## Examples
+
+See the `examples` directory for more examples:
+
+- `high_level_api_example.py`: Basic usage of the high-level API
+- `federated_learning_example.py`: Federated learning example
+
+## Documentation
+
+For detailed documentation, see the docstrings in the source code.
+
+## License
+
+MIT License
