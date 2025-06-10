@@ -1,6 +1,7 @@
 import numpy as np
 
 from ..layers import Layer_Input
+# from tensormodule import TensorModule
 from tqdm import tqdm
 import time
 import pickle
@@ -8,48 +9,10 @@ import copy
 from ..utils import TensorMonitor
 
 class Model:
-    xp = np # numpy is the default array module (CPU)
-    
-    # def get_array_module():
-    #     return Model.xp
-    
+    xp = np  # Add class-level xp attribute initialized with numpy
+
     def __init__(self , device = None):
-        import numpy as np
-        Model.xp = np#if Cupy fails or CPU is chosen
-        
-        if device is None:
-            try:
-                import cupy as cp
-                Model.xp = cp
-                self.device = 'gpu'
-                print("Using NVIDIA GPU with CuPy (auto-device-selection)")
-            except ImportError:
-                import numpy as np
-                Model.xp = np
-                self.device = 'cpu'
-                print("CuPy not found, using CPU with NumPy (auto-device-selection)")
-        else:
-            device = device.lower()
-            if device == 'gpu':
-                try:
-                    import cupy as cp
-                    Model.xp = cp
-                    self.device = 'gpu'
-                    print("Using NVIDIA GPU with Cupy (user-specified)")
-                except ImportError:
-                    print("Cupy not found, but GPU device was requested.\n \
-                          Falling back to CPU with NumPy.")
-                    import numpy as np
-                    Model.xp = np
-                    self.device = 'cpu'
-            elif device == 'cpu':
-                import numpy as np
-                Model.xp = np
-                self.device = 'cpu'
-                print("Using CPU with NumPy (user-specified)")
-            else:
-                raise ValueError(f"Invalid device choice: '{device}'. Choose 'cpu' or 'gpu'.")            
-        
+        # self.tensor_module = TensorModule(device)
         self.layers = []
         # Activation_Softmax classifier's output object
         self.softmax_classifier_output = None
